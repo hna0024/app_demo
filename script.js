@@ -30,6 +30,11 @@ let currentPage = 1;
 let itemsPerPage = 6;
 let currentFilter = 'all';
 
+// 스킬 페이지네이션 관련 변수
+let currentSkillPage = 1;
+let skillItemsPerPage = 4;
+let currentSkillFilter = 'all';
+
 
 
 /* ========================================
@@ -57,6 +62,8 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeVisitorCounter();
     initializeProjectData();
     initializePagination();
+    initializeSkillFilters();
+    initializeSkillPagination();
 });
 
 // ========================================
@@ -387,6 +394,160 @@ function updatePagination(totalItems) {
             filterAndPaginateProjects();
         });
         paginationNumbers.appendChild(pageBtn);
+    }
+}
+
+// ========================================
+// 스킬 필터링 기능
+// ========================================
+function initializeSkillFilters() {
+    const skillFilterButtons = document.querySelectorAll('.skill-filter-btn');
+
+    skillFilterButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // 활성 버튼 변경
+            skillFilterButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+
+            // 필터 변경 및 페이지 리셋
+            currentSkillFilter = this.getAttribute('data-skill-filter');
+            currentSkillPage = 1;
+            
+            // 스킬 필터링 및 페이지네이션 적용
+            filterAndPaginateSkills();
+        });
+    });
+}
+
+// ========================================
+// 스킬 페이지네이션 초기화
+// ========================================
+function initializeSkillPagination() {
+    const skillPrevBtn = document.getElementById('skillPrevBtn');
+    const skillNextBtn = document.getElementById('skillNextBtn');
+    const skillPaginationNumbers = document.getElementById('skillPaginationNumbers');
+
+    // 이전 버튼 이벤트
+    skillPrevBtn.addEventListener('click', function() {
+        if (currentSkillPage > 1) {
+            currentSkillPage--;
+            filterAndPaginateSkills();
+        }
+    });
+
+    // 다음 버튼 이벤트
+    skillNextBtn.addEventListener('click', function() {
+        const totalPages = getTotalSkillPages();
+        if (currentSkillPage < totalPages) {
+            currentSkillPage++;
+            filterAndPaginateSkills();
+        }
+    });
+
+    // 초기 스킬 페이지네이션 적용
+    filterAndPaginateSkills();
+}
+
+// ========================================
+// 스킬 필터링 및 페이지네이션
+// ========================================
+function filterAndPaginateSkills() {
+    const skillCategories = document.querySelectorAll('.skill-category');
+    const filteredSkills = [];
+
+    // 필터링된 스킬 카테고리들 수집
+    skillCategories.forEach(category => {
+        const skillCategory = category.getAttribute('data-skill-category');
+        if (currentSkillFilter === 'all' || skillCategory === currentSkillFilter) {
+            filteredSkills.push(category);
+        }
+    });
+
+    // 모든 스킬 카테고리 숨기기
+    skillCategories.forEach(category => {
+        category.style.display = 'none';
+    });
+
+    // 현재 페이지에 해당하는 스킬 카테고리들만 표시
+    const startIndex = (currentSkillPage - 1) * skillItemsPerPage;
+    const endIndex = startIndex + skillItemsPerPage;
+    const currentPageSkills = filteredSkills.slice(startIndex, endIndex);
+
+    currentPageSkills.forEach((category, index) => {
+        category.style.display = 'block';
+        category.style.animation = 'fadeIn 0.5s ease';
+        // 애니메이션 지연 효과
+        category.style.animationDelay = `${index * 0.1}s`;
+    });
+
+    // 스킬 페이지네이션 업데이트
+    updateSkillPagination(filteredSkills.length);
+}
+
+// ========================================
+// 스킬 총 페이지 수 계산
+// ========================================
+function getTotalSkillPages() {
+    const skillCategories = document.querySelectorAll('.skill-category');
+    const filteredSkills = [];
+
+    skillCategories.forEach(category => {
+        const skillCategory = category.getAttribute('data-skill-category');
+        if (currentSkillFilter === 'all' || skillCategory === currentSkillFilter) {
+            filteredSkills.push(category);
+        }
+    });
+
+    return Math.ceil(filteredSkills.length / skillItemsPerPage);
+}
+
+// ========================================
+// 스킬 페이지네이션 UI 업데이트
+// ========================================
+function updateSkillPagination(totalItems) {
+    const totalPages = Math.ceil(totalItems / skillItemsPerPage);
+    const skillPrevBtn = document.getElementById('skillPrevBtn');
+    const skillNextBtn = document.getElementById('skillNextBtn');
+    const skillPaginationNumbers = document.getElementById('skillPaginationNumbers');
+
+    // 이전/다음 버튼 상태 업데이트
+    skillPrevBtn.disabled = currentSkillPage === 1;
+    skillNextBtn.disabled = currentSkillPage === totalPages;
+
+    // 페이지 번호 생성
+    skillPaginationNumbers.innerHTML = '';
+    
+    if (totalPages <= 1) {
+        // 페이지가 1개 이하면 페이지네이션 숨기기
+        document.getElementById('skillPagination').style.display = 'none';
+        return;
+    } else {
+        document.getElementById('skillPagination').style.display = 'flex';
+    }
+
+    // 최대 5개의 페이지 번호만 표시
+    let startPage = Math.max(1, currentSkillPage - 2);
+    let endPage = Math.min(totalPages, currentSkillPage + 2);
+
+    // 시작 페이지 조정
+    if (endPage - startPage < 4) {
+        if (startPage === 1) {
+            endPage = Math.min(totalPages, startPage + 4);
+        } else {
+            startPage = Math.max(1, endPage - 4);
+        }
+    }
+
+    // 페이지 번호 버튼 생성
+    for (let i = startPage; i <= endPage; i++) {
+        const pageBtn = document.createElement('button');
+        pageBtn.className = `skill-page-number ${i === currentSkillPage ? 'active' : ''}`;
+        pageBtn.textContent = i;
+        pageBtn.addEventListener('click', function() {
+            currentSkillPage = i;
+            filterAndPaginateSkills();
+        });
+        skillPaginationNumbers.appendChild(pageBtn);
     }
 }
 

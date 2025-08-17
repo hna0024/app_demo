@@ -94,7 +94,7 @@
                         </div>
                         <div class="info-item">
                             <i class="fas fa-graduation-cap"></i>
-                            <span>패션디자인과 졸업<br>2025 분당융합기술교육원(인공지능 기반 Full-Stack 소프트웨어 엔지니어 양성 과정) 이수<br>심화 LowCode 기반 AI융합 스마트관리시스템 개발 심화과정 RPA OutSystems 프로젝트 진행 및 교육 수료</span>
+                            <span>패션디자인과 졸업<br>2025 분당융합기술교육원(인공지능 기반 Full-Stack 소프트웨어 엔지니어 양성 과정) 이수<br>심화 LowCode 기반 AI융합 스마트관리시스템 개발 심화과정 (25.05~25.07, 2개월)<br>RPA OutSystems 프로젝트 진행 및 교육 수료</span>
                         </div>
                         <div class="info-item">
                             <i class="fas fa-heart"></i>
@@ -115,46 +115,179 @@
     <section id="skills" class="skills">
         <div class="container">
             <h2 class="section-title">Skills & Interests</h2>
-            <div class="skills-grid">
-                <!-- 프로그래밍 기술 -->
-                <div class="skill-category">
-                    <h3><i class="fas fa-code"></i> 프로그래밍</h3>
+            
+            <!-- 스킬 필터 버튼들 -->
+            <div class="skill-filters">
+                <button class="skill-filter-btn active" data-skill-filter="all">전체</button>
+                <button class="skill-filter-btn" data-skill-filter="coding">코딩</button>
+                <button class="skill-filter-btn" data-skill-filter="hobby">취미</button>
+            </div>
+            
+            <div class="skills-grid" id="skillsGrid">
+                <!-- Front-end 기술 -->
+                <div class="skill-category" data-skill-category="coding">
+                    <h3><i class="fas fa-code"></i> Front-end</h3>
                     <div class="skill-items">
                         <div class="skill-item">
-                            <span>HTML/CSS/JavaScript</span>
+                            <span>HTML5/CSS3</span>
                             <div class="skill-bar">
                                 <div class="skill-progress" style="width: 90%"></div>
                             </div>
                         </div>
                         <div class="skill-item">
-                            <span>React</span>
+                            <span>JavaScript</span>
                             <div class="skill-bar">
                                 <div class="skill-progress" style="width: 85%"></div>
                             </div>
                         </div>
                         <div class="skill-item">
-                            <span>Node.js</span>
+                            <span>jQuery</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 80%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>AJAX</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 75%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Back-end 기술 -->
+                <div class="skill-category" data-skill-category="coding">
+                    <h3><i class="fas fa-server"></i> Back-end</h3>
+                    <div class="skill-items">
+                        <div class="skill-item">
+                            <span>Java</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 85%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>Spring Boot</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 80%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>JSP & Servlet</span>
                             <div class="skill-bar">
                                 <div class="skill-progress" style="width: 75%"></div>
                             </div>
                         </div>
                         <div class="skill-item">
-                            <span>Brity RPA/OutSystems</span>
+                            <span>MyBatis</span>
                             <div class="skill-bar">
                                 <div class="skill-progress" style="width: 70%"></div>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- 데이터베이스 -->
+                <div class="skill-category" data-skill-category="coding">
+                    <h3><i class="fas fa-database"></i> Database</h3>
+                    <div class="skill-items">
                         <div class="skill-item">
-                            <span>OS</span>
+                            <span>MySQL</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 85%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>Oracle</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 80%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>Firebase RealtimeDatabase</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 75%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LowCode 플랫폼 -->
+                <div class="skill-category" data-skill-category="coding">
+                    <h3><i class="fas fa-layer-group"></i> LowCode</h3>
+                    <div class="skill-items">
+                        <div class="skill-item">
+                            <span>OutSystems</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 85%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>Brity RPA</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 80%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 개발 도구 -->
+                <div class="skill-category" data-skill-category="coding">
+                    <h3><i class="fas fa-tools"></i> Tools & Etc.</h3>
+                    <div class="skill-items">
+                        <div class="skill-item">
+                            <span>VS Code</span>
                             <div class="skill-bar">
                                 <div class="skill-progress" style="width: 90%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>Eclipse</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 85%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>GitHub</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 80%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>Figma</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 75%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- OA 도구 -->
+                <div class="skill-category" data-skill-category="coding">
+                    <h3><i class="fas fa-file-alt"></i> OA</h3>
+                    <div class="skill-items">
+                        <div class="skill-item">
+                            <span>MS Excel</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 90%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>MS Word</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 85%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>MS PowerPoint</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 80%"></div>
                             </div>
                         </div>
                     </div>
                 </div>
                 
                 <!-- 음악 기술 -->
-                <div class="skill-category">
+                <div class="skill-category" data-skill-category="hobby">
                     <h3><i class="fas fa-music"></i> 음악</h3>
                     <div class="skill-items">
                         <div class="skill-item">
@@ -185,7 +318,7 @@
                 </div>
 
                 <!-- 미술 기술 -->
-                <div class="skill-category">
+                <div class="skill-category" data-skill-category="hobby">
                     <h3><i class="fas fa-palette"></i> 미술</h3>
                     <div class="skill-items">
                         <div class="skill-item">
@@ -216,7 +349,7 @@
                 </div>
 
                 <!-- 운동 기술 -->
-                <div class="skill-category">
+                <div class="skill-category" data-skill-category="hobby">
                     <h3><i class="fas fa-person-running"></i> 운동</h3>
                     <div class="skill-items">
                         <div class="skill-item">
@@ -253,7 +386,7 @@
                 </div>
 
                 <!-- 언어 능력 -->
-                <div class="skill-category">
+                <div class="skill-category" data-skill-category="hobby">
                     <h3><i class="fas fa-language"></i> 언어</h3>
                     <div class="skill-items">
                         <div class="skill-item">
@@ -296,7 +429,7 @@
                 </div>
 
                 <!-- 요리 기술 -->
-                <div class="skill-category">
+                <div class="skill-category" data-skill-category="hobby">
                     <h3><i class="fas fa-cookie"></i>요리</h3>
                     <div class="skill-items">
                         <div class="skill-item">
@@ -337,6 +470,19 @@
                         </div>
                     </div>
                 </div>
+            </div>
+            
+            <!-- 스킬 페이지네이션 -->
+            <div class="skill-pagination" id="skillPagination">
+                <button class="skill-pagination-btn" id="skillPrevBtn" disabled>
+                    <i class="fas fa-chevron-left"></i> 이전
+                </button>
+                <div class="skill-pagination-numbers" id="skillPaginationNumbers">
+                    <!-- 페이지 번호들이 동적으로 생성됩니다 -->
+                </div>
+                <button class="skill-pagination-btn" id="skillNextBtn">
+                    다음 <i class="fas fa-chevron-right"></i>
+                </button>
             </div>
         </div>
     </section>

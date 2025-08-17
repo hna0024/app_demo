@@ -432,6 +432,104 @@ section {
     font-weight: 500;
 }
 
+/* ========================================
+   Skills 섹션 필터 스타일
+   ======================================== */
+.skill-filters {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 3rem;
+    flex-wrap: wrap;
+}
+
+.skill-filter-btn {
+    padding: 10px 20px;
+    border: 2px solid #3498db;
+    background: transparent;
+    color: #3498db;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.skill-filter-btn.active,
+.skill-filter-btn:hover {
+    background: #3498db;
+    color: white;
+}
+
+/* ========================================
+   Skills 페이지네이션 스타일
+   ======================================== */
+.skill-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 3rem;
+    padding: 1rem 0;
+}
+
+.skill-pagination-btn {
+    padding: 10px 20px;
+    border: 2px solid #3498db;
+    background: transparent;
+    color: #3498db;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.skill-pagination-btn:hover:not(:disabled) {
+    background: #3498db;
+    color: white;
+    transform: translateY(-2px);
+}
+
+.skill-pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-color: #ccc;
+    color: #ccc;
+}
+
+.skill-pagination-numbers {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.skill-page-number {
+    width: 40px;
+    height: 40px;
+    border: 2px solid #3498db;
+    background: transparent;
+    color: #3498db;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.skill-page-number:hover {
+    background: #3498db;
+    color: white;
+    transform: translateY(-2px);
+}
+
+.skill-page-number.active {
+    background: #3498db;
+    color: white;
+}
+
 .filter-btn.active,
 .filter-btn:hover {
     background: #3498db;
@@ -835,7 +933,8 @@ section {
         align-items: center;
     }
 
-    .project-filters {
+    .project-filters,
+    .skill-filters {
         flex-direction: column;
         align-items: center;
     }
@@ -884,12 +983,14 @@ section {
         display: none;
     }
     
-    .pagination {
+    .pagination,
+    .skill-pagination {
         flex-direction: column;
         gap: 0.5rem;
     }
     
-    .pagination-numbers {
+    .pagination-numbers,
+    .skill-pagination-numbers {
         order: -1;
     }
 }

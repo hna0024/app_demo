@@ -27,12 +27,12 @@ let visitorCount = 0;
 
 // 페이지네이션 관련 변수
 let currentPage = 1;
-let itemsPerPage = 6;
+let itemsPerPage = 3;
 let currentFilter = 'all';
 
 // 스킬 페이지네이션 관련 변수
 let currentSkillPage = 1;
-let skillItemsPerPage = 4;
+let skillItemsPerPage = 3;
 let currentSkillFilter = 'all';
 
 

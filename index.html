@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <!-- 메타 태그 및 기본 설정 -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Introduce-myself-Hanna Lee">
+    <meta name="keywords" content="포트폴리오, 자기계발, 개발자, 음악, 독서, 일본어">
+    <title>Portfolio - Hanna Lee</title>
+    
+    <!-- 외부 리소스 로드 -->
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- ===== 네비게이션 바 ===== -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <a href="#home">Portfolio</a>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="#home" class="nav-link">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#about" class="nav-link">Introduce</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#skills" class="nav-link">Skills</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#projects" class="nav-link">Projects</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#contact" class="nav-link">Contact</a>
+                </li>
+            </ul>
+            <div class="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ===== 방문자 카운터 ===== -->
+    <div class="visitor-counter">
+        <span class="visitor-count">방문자: 로딩 중...</span>
+    </div>
+
+    <!-- ===== 메인 히어로 섹션 ===== -->
+    <section id="home" class="hero">
+        <div class="hero-container">
+            <div class="hero-content">
+                <h1 class="hero-title">Hi,Guys! <span class="highlight">Hanna Lee</span></h1>
+                <p class="hero-subtitle">I'm a budding developer passionate about AI and software engineering.</p>
+                <div class="hero-buttons">
+                    <a href="#about" class="btn btn-primary">Viewport</a>
+                    <a href="#projects" class="btn btn-secondary">Projects</a>
+                </div>
+            </div>
+            <div class="hero-image">
+                <div class="profile-card">
+                    <div class="profile-image">
+                        <img src="me_img.png" alt="Profile" class="profile-photo">
+                    </div>
+                    <h3>Hanna Lee</h3>
+                    <p>Up-and-coming Developer</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== 개인 소개 섹션 ===== -->
+    <section id="about" class="about">
+        <div class="container">
+            <h2 class="section-title">About Me</h2>
+            <div class="about-content">
+                <div class="about-text">
+                    <h3>Hi,Guys!</h3>
+                    <p>I'm a developer who thrives on continuous learning and growth. My goal is to enhance my skills by embracing new technologies and taking on a wide range of projects.</p>
+                    
+                    <!-- 개인 정보 카드들 -->
+                    <div class="personal-info">
+                        <div class="info-item">
+                            <i class="fas fa-birthday-cake"></i>
+                            <span>2001년 1월 15일</span>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span>정보처리기사<br>컬러리스트산업기사</span>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-graduation-cap"></i>
+                            <span>패션디자인과 졸업<br>2025 분당융합기술교육원(인공지능 기반 Full-Stack 소프트웨어 엔지니어 양성 과정) 이수<br>심화 LowCode 기반 AI융합 스마트관리시스템 개발 심화과정 RPA OutSystems 프로젝트 진행 및 교육 수료</span>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-heart"></i>
+                            <span>코딩, 음악, 그림, 독서, 운동, 요리</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="about-image">
+                    <div class="image-placeholder">
+                        <img src="me_img2.jpg" alt="Profile" class="about-photo">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== 기술 및 관심사 섹션 ===== -->
+    <section id="skills" class="skills">
+        <div class="container">
+            <h2 class="section-title">Skills & Interests</h2>
+            <div class="skills-grid">
+                <!-- 프로그래밍 기술 -->
+                <div class="skill-category">
+                    <h3><i class="fas fa-code"></i> 프로그래밍</h3>
+                    <div class="skill-items">
+                        <div class="skill-item">
+                            <span>HTML/CSS/JavaScript</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 90%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>React</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 85%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>Node.js</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 75%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>Brity RPA/OutSystems</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 70%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>OS</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 90%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 음악 기술 -->
+                <div class="skill-category">
+                    <h3><i class="fas fa-music"></i> 음악</h3>
+                    <div class="skill-items">
+                        <div class="skill-item">
+                            <span>기타</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 70%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>피아노</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 40%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>작곡</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 30%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>노래</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 50%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 미술 기술 -->
+                <div class="skill-category">
+                    <h3><i class="fas fa-palette"></i> 미술</h3>
+                    <div class="skill-items">
+                        <div class="skill-item">
+                            <span>소묘</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 80%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>유화</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 60%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>디자인</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 90%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>수채화</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 70%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 운동 기술 -->
+                <div class="skill-category">
+                    <h3><i class="fas fa-person-running"></i> 운동</h3>
+                    <div class="skill-items">
+                        <div class="skill-item">
+                            <span>수영</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width:60%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>헬스</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 40%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>요가</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 90%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>배드민턴</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 70%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>풋살</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 40%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 언어 능력 -->
+                <div class="skill-category">
+                    <h3><i class="fas fa-language"></i> 언어</h3>
+                    <div class="skill-items">
+                        <div class="skill-item">
+                            <span>한국어</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 80%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>영어</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 70%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>일본어</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 60%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>중국어</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 50%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>프랑스어</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 20%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>히브리어</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 20%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 요리 기술 -->
+                <div class="skill-category">
+                    <h3><i class="fas fa-cookie"></i>요리</h3>
+                    <div class="skill-items">
+                        <div class="skill-item">
+                            <span>한식</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 100%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>중식</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 50%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>일식</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 60%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>양식</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 90%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>분식</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 80%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span>베이킹</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 70%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== 자기계발 프로젝트 섹션 ===== -->
+    <section id="projects" class="projects">
+        <div class="container">
+            <h2 class="section-title">Self-Development Projects</h2>
+            
+            <!-- 프로젝트 필터 버튼들 -->
+            <div class="project-filters">
+                <button class="filter-btn active" data-filter="all">전체</button>
+                <button class="filter-btn" data-filter="music">음악</button>
+                <button class="filter-btn" data-filter="study">공부</button>
+                <button class="filter-btn" data-filter="reading">독서</button>
+                <button class="filter-btn" data-filter="language">언어</button>
+            </div>
+            
+            <!-- 프로젝트 카드 그리드 -->
+            <div class="projects-grid">
+                <!-- JPOP프로젝트 -->
+                <div class="project-card" data-category="language">
+                    <div class="project-image">
+                        <i class="fas fa-language"></i>
+                    </div>
+                    <div class="project-content">
+                        <h3>일본어 노래 연습</h3>
+                        <p>일본어 발음과 억양 연습을 위한 노래 연습 과정을 기록했습니다.</p>
+                        <div class="project-tags">
+                            <span class="tag">일본어</span>
+                            <span class="tag">노래</span>
+                        </div>
+                        <button class="btn btn-small" onclick="playVideo('japanese-video')">영상 보기</button>
+                    </div>
+                </div>
+
+                <!-- React 개발 프로젝트 -->
+                <div class="project-card" data-category="study">
+                    <div class="project-image">
+                        <i class="fas fa-laptop-code"></i>
+                    </div>
+                    <div class="project-content">
+                        <h3>React 프로젝트 개발</h3>
+                        <p>React를 활용한 웹 애플리케이션 개발 과정을 기록했습니다.</p>
+                        <div class="project-tags">
+                            <span class="tag">React</span>
+                            <span class="tag">JavaScript</span>
+                        </div>
+                        <button class="btn btn-small" onclick="playVideo('react-video')">영상 보기</button>
+                    </div>
+                </div>
+
+                <!-- 독서감상문 프로젝트 -->
+                <div class="project-card" data-category="reading">
+                    <div class="project-image">
+                        <i class="fas fa-book"></i>
+                    </div>
+                    <div class="project-content">
+                        <h3>"미움받을 용기" 독서감상문</h3>
+                        <p>아들러 심리학에 대한 깊이 있는 독서 후기를 작성했습니다.</p>
+                        <div class="project-tags">
+                            <span class="tag">독서</span>
+                            <span class="tag">심리학</span>
+                        </div>
+                        <button class="btn btn-small" onclick="showReading('reading-1')">감상문 보기</button>
+                    </div>
+                </div>
+
+                <!-- 피아노 연주 프로젝트 -->
+                <div class="project-card" data-category="music">
+                    <div class="project-image">
+                        <i class="fas fa-piano"></i>
+                    </div>
+                    <div class="project-content">
+                        <h3>피아노 연주 - "River Flows in You"</h3>
+                        <p>직접 작곡한 곡을 연주한 영상입니다.</p>
+                        <div class="project-tags">
+                            <span class="tag">피아노</span>
+                            <span class="tag">연주</span>
+                        </div>
+                        <button class="btn btn-small" onclick="playVideo('piano-video')">영상 보기</button>
+                    </div>
+                </div>
+
+                <!-- 기타 연주 프로젝트 -->
+                <div class="project-card" data-category="music">
+                    <div class="project-image">
+                        <i class="fas fa-guitar"></i>
+                    </div>
+                    <div class="project-content">
+                        <h3>기타 연주 - "Hotel California"</h3>
+                        <p>클래식 기타 연주 연습 과정을 담은 영상입니다.</p>
+                        <div class="project-tags">
+                            <span class="tag">기타</span>
+                            <span class="tag">연주</span>
+                        </div>
+                        <button class="btn btn-small" onclick="playVideo('guitar-video')">영상 보기</button>
+                    </div>
+                </div>
+
+                <!-- 미술 포토폴리오 -->
+                <div class="project-card" data-category="study">
+                    <div class="project-image">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <div class="project-content">
+                        <h3>미술 - 개인 작업물</h3>
+                        <p>전시회 때 작업했던 그림들과 입시 및 취미로 만든 작업물들입니다.</p>
+                        <div class="project-tags">
+                            <span class="tag">소묘</span>
+                            <span class="tag">조소</span>
+                            <span class="tag">디자인</span>
+                        </div>
+                        <button class="btn btn-small" onclick="playVideo('database-video')">영상 보기</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== 연락처 섹션 ===== -->
+    <section id="contact" class="contact">
+        <div class="container">
+            <h2 class="section-title">Contact</h2>
+            <div class="contact-content">
+                <!-- 연락처 정보 -->
+                <div class="contact-info">
+                    <div class="contact-item">
+                        <i class="fas fa-envelope"></i>
+                        <div>
+                            <h3>Email</h3>
+                            <p>hna24740026@gmail.com</p>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fas fa-phone"></i>
+                        <div>
+                            <h3>Phone</h3>
+                            <p>010-9468-2474</p>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fab fa-github"></i>
+                        <div>
+                            <h3>GitHub</h3>
+                            <a href="https://github.com/hna0024">https://github.com/hna0024</a>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fab fa-linkedin"></i>
+                        <div>
+                            <h3>LinkedIn</h3>
+                            <p>https://our-app-frontend.vercel.app/</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 연락처 폼 -->
+                <div class="contact-form">
+                    <h3>Send Message</h3>
+                    <form id="contactForm">
+                        <div class="form-group">
+                            <input type="text" id="name" name="name" placeholder="Name" required>
+                        </div>
+                        <div class="form-group">
+                            <input type="email" id="email" name="email" placeholder="Email" required>
+                        </div>
+                        <div class="form-group">
+                            <input type="text" id="subject" name="subject" placeholder="Title" required>
+                        </div>
+                        <div class="form-group">
+                            <textarea id="message" name="message" placeholder="Message" rows="5" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Send</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== 모달 창 ===== -->
+    <div id="videoModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div id="modalContent">
+                <h2 id="modalTitle"></h2>
+                <div id="modalBody"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 푸터 ===== -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 Hanna Lee. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript 파일 로드 -->
+    <script type="module" src="script.js"></script>
+</body>
+</html> 

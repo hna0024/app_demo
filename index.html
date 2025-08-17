@@ -349,16 +349,118 @@
             <!-- 프로젝트 필터 버튼들 -->
             <div class="project-filters">
                 <button class="filter-btn active" data-filter="all">전체</button>
+                <button class="filter-btn" data-filter="coding">코딩</button>
                 <button class="filter-btn" data-filter="music">음악</button>
-                <button class="filter-btn" data-filter="study">공부</button>
+                <button class="filter-btn" data-filter="hobby">취미</button>
                 <button class="filter-btn" data-filter="reading">독서</button>
-                <button class="filter-btn" data-filter="language">언어</button>
             </div>
             
             <!-- 프로젝트 카드 그리드 -->
-            <div class="projects-grid">
-                <!-- JPOP프로젝트 -->
-                <div class="project-card" data-category="language">
+            <div class="projects-grid" id="projectsGrid">
+                <!-- 포트폴리오 웹사이트 -->
+                <div class="project-card" data-category="coding">
+                    <div class="project-image">
+                        <i class="fas fa-laptop-code"></i>
+                    </div>
+                    <div class="project-content">
+                        <h3>포트폴리오 웹사이트</h3>
+                        <p>HTML, CSS, JavaScript를 활용한 반응형 포트폴리오 웹사이트입니다.</p>
+                        <div class="project-tags">
+                            <span class="tag">HTML</span>
+                            <span class="tag">CSS</span>
+                            <span class="tag">JavaScript</span>
+                        </div>
+                        <button class="btn btn-small" onclick="playVideo('portfolio-video')">영상 보기</button>
+                    </div>
+                </div>
+
+                <!-- React 프로젝트 -->
+                <div class="project-card" data-category="coding">
+                    <div class="project-image">
+                        <i class="fab fa-react"></i>
+                    </div>
+                    <div class="project-content">
+                        <h3>React 웹 애플리케이션</h3>
+                        <p>React를 활용한 동적 웹 애플리케이션 개발 프로젝트입니다.</p>
+                        <div class="project-tags">
+                            <span class="tag">React</span>
+                            <span class="tag">JavaScript</span>
+                            <span class="tag">API</span>
+                        </div>
+                        <button class="btn btn-small" onclick="playVideo('react-video')">영상 보기</button>
+                    </div>
+                </div>
+
+                <!-- Node.js 백엔드 -->
+                <div class="project-card" data-category="coding">
+                    <div class="project-image">
+                        <i class="fab fa-node-js"></i>
+                    </div>
+                    <div class="project-content">
+                        <h3>Node.js 백엔드 API</h3>
+                        <p>Express.js를 활용한 RESTful API 서버 개발 프로젝트입니다.</p>
+                        <div class="project-tags">
+                            <span class="tag">Node.js</span>
+                            <span class="tag">Express</span>
+                            <span class="tag">MongoDB</span>
+                        </div>
+                        <button class="btn btn-small" onclick="playVideo('nodejs-video')">영상 보기</button>
+                    </div>
+                </div>
+
+                <!-- Firebase 연동 프로젝트 -->
+                <div class="project-card" data-category="coding">
+                    <div class="project-image">
+                        <i class="fas fa-fire"></i>
+                    </div>
+                    <div class="project-content">
+                        <h3>Firebase 연동 웹앱</h3>
+                        <p>Firebase Authentication, Firestore, Storage를 활용한 풀스택 웹 애플리케이션입니다.</p>
+                        <div class="project-tags">
+                            <span class="tag">Firebase</span>
+                            <span class="tag">Authentication</span>
+                            <span class="tag">Firestore</span>
+                        </div>
+                        <button class="btn btn-small" onclick="playVideo('firebase-video')">영상 보기</button>
+                    </div>
+                </div>
+
+                <!-- RPA 프로젝트 -->
+                <div class="project-card" data-category="coding">
+                    <div class="project-image">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="project-content">
+                        <h3>RPA 자동화 시스템</h3>
+                        <p>Brity RPA와 OutSystems를 활용한 업무 자동화 시스템 개발 프로젝트입니다.</p>
+                        <div class="project-tags">
+                            <span class="tag">RPA</span>
+                            <span class="tag">OutSystems</span>
+                            <span class="tag">자동화</span>
+                        </div>
+                        <button class="btn btn-small" onclick="playVideo('rpa-video')">영상 보기</button>
+                    </div>
+                </div>
+
+                <!-- AI 융합 프로젝트 -->
+                <div class="project-card" data-category="coding">
+                    <div class="project-image">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <div class="project-content">
+                        <h3>AI 융합 스마트 시스템</h3>
+                        <p>인공지능 기반 스마트 관리시스템 개발 프로젝트입니다.</p>
+                        <div class="project-tags">
+                            <span class="tag">AI</span>
+                            <span class="tag">Python</span>
+                            <span class="tag">머신러닝</span>
+                        </div>
+                        <button class="btn btn-small" onclick="playVideo('ai-video')">영상 보기</button>
+                    </div>
+                </div>
+
+                <!-- 일본어 노래 연습 -->
+                <div class="project-card" data-category="hobby">
                     <div class="project-image">
                         <i class="fas fa-language"></i>
                     </div>
@@ -373,23 +475,7 @@
                     </div>
                 </div>
 
-                <!-- React 개발 프로젝트 -->
-                <div class="project-card" data-category="study">
-                    <div class="project-image">
-                        <i class="fas fa-laptop-code"></i>
-                    </div>
-                    <div class="project-content">
-                        <h3>React 프로젝트 개발</h3>
-                        <p>React를 활용한 웹 애플리케이션 개발 과정을 기록했습니다.</p>
-                        <div class="project-tags">
-                            <span class="tag">React</span>
-                            <span class="tag">JavaScript</span>
-                        </div>
-                        <button class="btn btn-small" onclick="playVideo('react-video')">영상 보기</button>
-                    </div>
-                </div>
-
-                <!-- 독서감상문 프로젝트 -->
+                <!-- 독서감상문 -->
                 <div class="project-card" data-category="reading">
                     <div class="project-image">
                         <i class="fas fa-book"></i>
@@ -405,13 +491,13 @@
                     </div>
                 </div>
 
-                <!-- 피아노 연주 프로젝트 -->
+                <!-- 피아노 연주 -->
                 <div class="project-card" data-category="music">
                     <div class="project-image">
-                        <i class="fas fa-piano"></i>
+                        <i class="fas fa-music"></i>
                     </div>
                     <div class="project-content">
-                        <h3>피아노 연주 - "River Flows in You"</h3>
+                        <h3>피아노 연주 - "Rivers"</h3>
                         <p>직접 작곡한 곡을 연주한 영상입니다.</p>
                         <div class="project-tags">
                             <span class="tag">피아노</span>
@@ -421,7 +507,7 @@
                     </div>
                 </div>
 
-                <!-- 기타 연주 프로젝트 -->
+                <!-- 기타 연주 -->
                 <div class="project-card" data-category="music">
                     <div class="project-image">
                         <i class="fas fa-guitar"></i>
@@ -437,10 +523,10 @@
                     </div>
                 </div>
 
-                <!-- 미술 포토폴리오 -->
-                <div class="project-card" data-category="study">
+                <!-- 미술 포트폴리오 -->
+                <div class="project-card" data-category="hobby">
                     <div class="project-image">
-                        <i class="fas fa-database"></i>
+                        <i class="fas fa-palette"></i>
                     </div>
                     <div class="project-content">
                         <h3>미술 - 개인 작업물</h3>
@@ -450,9 +536,22 @@
                             <span class="tag">조소</span>
                             <span class="tag">디자인</span>
                         </div>
-                        <button class="btn btn-small" onclick="playVideo('database-video')">영상 보기</button>
+                        <button class="btn btn-small" onclick="playVideo('art-video')">영상 보기</button>
                     </div>
                 </div>
+            </div>
+            
+            <!-- 페이지네이션 -->
+            <div class="pagination" id="pagination">
+                <button class="pagination-btn" id="prevBtn" disabled>
+                    <i class="fas fa-chevron-left"></i> 이전
+                </button>
+                <div class="pagination-numbers" id="paginationNumbers">
+                    <!-- 페이지 번호들이 동적으로 생성됩니다 -->
+                </div>
+                <button class="pagination-btn" id="nextBtn">
+                    다음 <i class="fas fa-chevron-right"></i>
+                </button>
             </div>
         </div>
     </section>
@@ -531,11 +630,16 @@
     <!-- ===== 푸터 ===== -->
     <footer class="footer">
         <div class="container">
-            <p>&copy; 2025 Hanna Lee. All rights reserved.</p>
+            <p>&copy; 2025 Hanna Lee. All rights reserved. | 
+                <a href="development-notes.html" target="_blank" class="footer-link">
+                    <i class="fas fa-code"></i> Development Notes
+                </a>
+            </p>
         </div>
     </footer>
 
     <!-- JavaScript 파일 로드 -->
     <script type="module" src="script.js"></script>
 </body>
+</html>
 </html> 

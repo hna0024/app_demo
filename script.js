@@ -25,6 +25,11 @@ const storage = getStorage(app);
 let currentUser = null;
 let visitorCount = 0;
 
+// 페이지네이션 관련 변수
+let currentPage = 1;
+let itemsPerPage = 6;
+let currentFilter = 'all';
+
 
 
 /* ========================================
@@ -51,6 +56,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initializePageLoadEffects();
     initializeVisitorCounter();
     initializeProjectData();
+    initializePagination();
 });
 
 // ========================================
@@ -231,11 +237,10 @@ function initializeSkillAnimations() {
 }
 
 // ========================================
-// 프로젝트 필터링 기능
+// 프로젝트 필터링 기능 (페이지네이션 포함)
 // ========================================
 function initializeProjectFilters() {
     const filterButtons = document.querySelectorAll('.filter-btn');
-    const projectCards = document.querySelectorAll('.project-card');
 
     filterButtons.forEach(button => {
         button.addEventListener('click', function() {
@@ -243,21 +248,146 @@ function initializeProjectFilters() {
             filterButtons.forEach(btn => btn.classList.remove('active'));
             this.classList.add('active');
 
-            // 프로젝트 필터링
-            const filter = this.getAttribute('data-filter');
+            // 필터 변경 및 페이지 리셋
+            currentFilter = this.getAttribute('data-filter');
+            currentPage = 1;
             
-            projectCards.forEach(card => {
-                const category = card.getAttribute('data-category');
-                
-                if (filter === 'all' || category === filter) {
-                    card.style.display = 'block';
-                    card.style.animation = 'fadeIn 0.5s ease';
-                } else {
-                    card.style.display = 'none';
-                }
-            });
+            // 프로젝트 필터링 및 페이지네이션 적용
+            filterAndPaginateProjects();
         });
     });
+}
+
+// ========================================
+// 페이지네이션 초기화
+// ========================================
+function initializePagination() {
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const paginationNumbers = document.getElementById('paginationNumbers');
+
+    // 이전 버튼 이벤트
+    prevBtn.addEventListener('click', function() {
+        if (currentPage > 1) {
+            currentPage--;
+            filterAndPaginateProjects();
+        }
+    });
+
+    // 다음 버튼 이벤트
+    nextBtn.addEventListener('click', function() {
+        const totalPages = getTotalPages();
+        if (currentPage < totalPages) {
+            currentPage++;
+            filterAndPaginateProjects();
+        }
+    });
+
+    // 초기 페이지네이션 적용
+    filterAndPaginateProjects();
+}
+
+// ========================================
+// 프로젝트 필터링 및 페이지네이션
+// ========================================
+function filterAndPaginateProjects() {
+    const projectCards = document.querySelectorAll('.project-card');
+    const filteredCards = [];
+
+    // 필터링된 카드들 수집
+    projectCards.forEach(card => {
+        const category = card.getAttribute('data-category');
+        if (currentFilter === 'all' || category === currentFilter) {
+            filteredCards.push(card);
+        }
+    });
+
+    // 모든 카드 숨기기
+    projectCards.forEach(card => {
+        card.style.display = 'none';
+    });
+
+    // 현재 페이지에 해당하는 카드들만 표시
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const currentPageCards = filteredCards.slice(startIndex, endIndex);
+
+    currentPageCards.forEach((card, index) => {
+        card.style.display = 'block';
+        card.style.animation = 'fadeIn 0.5s ease';
+        // 애니메이션 지연 효과
+        card.style.animationDelay = `${index * 0.1}s`;
+    });
+
+    // 페이지네이션 업데이트
+    updatePagination(filteredCards.length);
+}
+
+// ========================================
+// 총 페이지 수 계산
+// ========================================
+function getTotalPages() {
+    const projectCards = document.querySelectorAll('.project-card');
+    const filteredCards = [];
+
+    projectCards.forEach(card => {
+        const category = card.getAttribute('data-category');
+        if (currentFilter === 'all' || category === currentFilter) {
+            filteredCards.push(card);
+        }
+    });
+
+    return Math.ceil(filteredCards.length / itemsPerPage);
+}
+
+// ========================================
+// 페이지네이션 UI 업데이트
+// ========================================
+function updatePagination(totalItems) {
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const paginationNumbers = document.getElementById('paginationNumbers');
+
+    // 이전/다음 버튼 상태 업데이트
+    prevBtn.disabled = currentPage === 1;
+    nextBtn.disabled = currentPage === totalPages;
+
+    // 페이지 번호 생성
+    paginationNumbers.innerHTML = '';
+    
+    if (totalPages <= 1) {
+        // 페이지가 1개 이하면 페이지네이션 숨기기
+        document.getElementById('pagination').style.display = 'none';
+        return;
+    } else {
+        document.getElementById('pagination').style.display = 'flex';
+    }
+
+    // 최대 5개의 페이지 번호만 표시
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, currentPage + 2);
+
+    // 시작 페이지 조정
+    if (endPage - startPage < 4) {
+        if (startPage === 1) {
+            endPage = Math.min(totalPages, startPage + 4);
+        } else {
+            startPage = Math.max(1, endPage - 4);
+        }
+    }
+
+    // 페이지 번호 버튼 생성
+    for (let i = startPage; i <= endPage; i++) {
+        const pageBtn = document.createElement('button');
+        pageBtn.className = `page-number ${i === currentPage ? 'active' : ''}`;
+        pageBtn.textContent = i;
+        pageBtn.addEventListener('click', function() {
+            currentPage = i;
+            filterAndPaginateProjects();
+        });
+        paginationNumbers.appendChild(pageBtn);
+    }
 }
 
 // ========================================
@@ -554,6 +684,102 @@ async function playVideo(videoId) {
         
         // 비디오 데이터 (Firebase에서 동적으로 로드 가능)
         const videoData = {
+            'portfolio-video': {
+                title: '포트폴리오 웹사이트 개발',
+                content: `
+                    <div style="text-align: center;">
+                        <div style="background: #f8f9fa; padding: 2rem; border-radius: 10px; margin-bottom: 1rem;">
+                            <i class="fas fa-laptop-code" style="font-size: 3rem; color: #3498db; margin-bottom: 1rem;"></i>
+                            <p>포트폴리오 웹사이트 개발 과정</p>
+                            <p>HTML, CSS, JavaScript를 활용한 반응형 웹사이트 개발 과정입니다.</p>
+                        </div>
+                        <p><strong>프로젝트:</strong> 개인 포트폴리오 웹사이트</p>
+                        <p><strong>기술 스택:</strong> HTML, CSS, JavaScript, Firebase</p>
+                        <p><strong>개발 기간:</strong> 2주</p>
+                        <p><strong>주요 기능:</strong> 반응형 디자인, Firebase 연동, 모달 창, 애니메이션</p>
+                    </div>
+                `
+            },
+            'react-video': {
+                title: 'React 웹 애플리케이션 개발',
+                content: `
+                    <div style="text-align: center;">
+                        <div style="background: #f8f9fa; padding: 2rem; border-radius: 10px; margin-bottom: 1rem;">
+                            <i class="fab fa-react" style="font-size: 3rem; color: #3498db; margin-bottom: 1rem;"></i>
+                            <p>React 웹 애플리케이션 개발 과정</p>
+                            <p>React를 활용한 동적 웹 애플리케이션 개발 과정입니다.</p>
+                        </div>
+                        <p><strong>프로젝트:</strong> React 웹 애플리케이션</p>
+                        <p><strong>기술 스택:</strong> React, JavaScript, CSS, API</p>
+                        <p><strong>개발 기간:</strong> 3개월</p>
+                        <p><strong>주요 기능:</strong> 컴포넌트 기반 개발, 상태 관리, API 연동</p>
+                    </div>
+                `
+            },
+            'nodejs-video': {
+                title: 'Node.js 백엔드 API 개발',
+                content: `
+                    <div style="text-align: center;">
+                        <div style="background: #f8f9fa; padding: 2rem; border-radius: 10px; margin-bottom: 1rem;">
+                            <i class="fab fa-node-js" style="font-size: 3rem; color: #3498db; margin-bottom: 1rem;"></i>
+                            <p>Node.js 백엔드 API 개발 과정</p>
+                            <p>Express.js를 활용한 RESTful API 서버 개발 과정입니다.</p>
+                        </div>
+                        <p><strong>프로젝트:</strong> RESTful API 서버</p>
+                        <p><strong>기술 스택:</strong> Node.js, Express, MongoDB</p>
+                        <p><strong>개발 기간:</strong> 1개월</p>
+                        <p><strong>주요 기능:</strong> CRUD API, 데이터베이스 연동, 인증 시스템</p>
+                    </div>
+                `
+            },
+            'firebase-video': {
+                title: 'Firebase 연동 웹앱 개발',
+                content: `
+                    <div style="text-align: center;">
+                        <div style="background: #f8f9fa; padding: 2rem; border-radius: 10px; margin-bottom: 1rem;">
+                            <i class="fas fa-fire" style="font-size: 3rem; color: #3498db; margin-bottom: 1rem;"></i>
+                            <p>Firebase 연동 웹앱 개발 과정</p>
+                            <p>Firebase 서비스를 활용한 풀스택 웹 애플리케이션 개발 과정입니다.</p>
+                        </div>
+                        <p><strong>프로젝트:</strong> Firebase 연동 웹앱</p>
+                        <p><strong>기술 스택:</strong> Firebase, Authentication, Firestore, Storage</p>
+                        <p><strong>개발 기간:</strong> 2개월</p>
+                        <p><strong>주요 기능:</strong> 사용자 인증, 실시간 데이터베이스, 파일 업로드</p>
+                    </div>
+                `
+            },
+            'rpa-video': {
+                title: 'RPA 자동화 시스템 개발',
+                content: `
+                    <div style="text-align: center;">
+                        <div style="background: #f8f9fa; padding: 2rem; border-radius: 10px; margin-bottom: 1rem;">
+                            <i class="fas fa-robot" style="font-size: 3rem; color: #3498db; margin-bottom: 1rem;"></i>
+                            <p>RPA 자동화 시스템 개발 과정</p>
+                            <p>Brity RPA와 OutSystems를 활용한 업무 자동화 시스템 개발 과정입니다.</p>
+                        </div>
+                        <p><strong>프로젝트:</strong> 업무 자동화 시스템</p>
+                        <p><strong>기술 스택:</strong> Brity RPA, OutSystems, Low-Code</p>
+                        <p><strong>개발 기간:</strong> 3개월</p>
+                        <p><strong>주요 기능:</strong> 업무 프로세스 자동화, 워크플로우 관리</p>
+                    </div>
+                `
+            },
+            'ai-video': {
+                title: 'AI 융합 스마트 시스템 개발',
+                content: `
+                    <div style="text-align: center;">
+                        <div style="background: #f8f9fa; padding: 2rem; border-radius: 10px; margin-bottom: 1rem;">
+                            <i class="fas fa-brain" style="font-size: 3rem; color: #3498db; margin-bottom: 1rem;"></i>
+                            <p>AI 융합 스마트 시스템 개발 과정</p>
+                            <p>인공지능 기반 스마트 관리시스템 개발 과정입니다.</p>
+                        </div>
+                        <p><strong>프로젝트:</strong> AI 스마트 관리시스템</p>
+                        <p><strong>기술 스택:</strong> Python, AI, 머신러닝, 데이터 분석</p>
+                        <p><strong>개발 기간:</strong> 4개월</p>
+                        <p><strong>주요 기능:</strong> 데이터 분석, 예측 모델, 스마트 관리</p>
+                    </div>
+                `
+            },
             'guitar-video': {
                 title: '기타 연주 - "Hotel California"',
                 content: `
@@ -566,21 +792,6 @@ async function playVideo(videoId) {
                         <p><strong>연주곡:</strong> Hotel California - Eagles</p>
                         <p><strong>연주 시간:</strong> 6분 30초</p>
                         <p><strong>설명:</strong> 클래식 기타로 연주한 Hotel California입니다. 3개월간 연습한 결과물입니다.</p>
-                    </div>
-                `
-            },
-            'react-video': {
-                title: 'React 프로젝트 개발 과정',
-                content: `
-                    <div style="text-align: center;">
-                        <div style="background: #f8f9fa; padding: 2rem; border-radius: 10px; margin-bottom: 1rem;">
-                            <i class="fas fa-code" style="font-size: 3rem; color: #3498db; margin-bottom: 1rem;"></i>
-                            <p>React 프로젝트 개발 과정 영상</p>
-                            <p>코딩 과정과 문제 해결 방법을 담은 영상입니다.</p>
-                        </div>
-                        <p><strong>프로젝트:</strong> 포트폴리오 웹사이트</p>
-                        <p><strong>기술 스택:</strong> React, JavaScript, CSS</p>
-                        <p><strong>개발 기간:</strong> 3개월</p>
                     </div>
                 `
             },
@@ -627,18 +838,18 @@ async function playVideo(videoId) {
                     </div>
                 `
             },
-            'database-video': {
-                title: '데이터베이스 설계 과정',
+            'art-video': {
+                title: '미술 포트폴리오',
                 content: `
                     <div style="text-align: center;">
                         <div style="background: #f8f9fa; padding: 2rem; border-radius: 10px; margin-bottom: 1rem;">
-                            <i class="fas fa-database" style="font-size: 3rem; color: #3498db; margin-bottom: 1rem;"></i>
-                            <p>데이터베이스 설계 영상</p>
-                            <p>MySQL을 활용한 데이터베이스 설계 및 구현 과정입니다.</p>
+                            <i class="fas fa-palette" style="font-size: 3rem; color: #3498db; margin-bottom: 1rem;"></i>
+                            <p>미술 포트폴리오</p>
+                            <p>전시회와 입시용 미술 작업물들을 담은 포트폴리오입니다.</p>
                         </div>
-                        <p><strong>프로젝트:</strong> 온라인 쇼핑몰 DB 설계</p>
-                        <p><strong>기술:</strong> MySQL, ERD, 정규화</p>
-                        <p><strong>설계 기간:</strong> 1주</p>
+                        <p><strong>작품 종류:</strong> 소묘, 유화, 수채화, 디자인</p>
+                        <p><strong>작업 기간:</strong> 4년</p>
+                        <p><strong>설명:</strong> 패션디자인과 재학 중 제작한 다양한 미술 작품들입니다.</p>
                     </div>
                 `
             }

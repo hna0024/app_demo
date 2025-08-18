@@ -231,6 +231,18 @@
         </div>
     </section>
 
+    <!-- ===== Updates (CRUD) ===== -->
+    <section class="dev-section">
+        <div class="container">
+            <h2 class="section-title">Updates</h2>
+            <div class="admin-toolbar">
+                <button id="addUpdateBtn" class="btn btn-primary btn-small"><i class="fas fa-plus"></i> 추가</button>
+                <span id="adminStatus" class="admin-status"></span>
+            </div>
+            <div id="devNotesList"></div>
+        </div>
+    </section>
+
     <!-- ===== 개발 타임라인 ===== -->
     <section class="dev-section">
         <div class="container">
@@ -477,14 +489,50 @@ await addDoc(messagesRef, {
         </div>
     </footer>
 
+    <!-- PIN 확인 모달 -->
+    <div id="pinModal" class="modal">
+        <div class="modal-content">
+            <span class="close" data-close="pinModal">&times;</span>
+            <h2>관리자 확인</h2>
+            <p style="color:#666; margin-bottom:1rem;">관리자 비밀번호(4자리)를 입력하세요.</p>
+            <div class="form-group">
+                <input type="password" id="pinInput" placeholder="관리자 PIN (4자리)" maxlength="4" inputmode="numeric" pattern="\d{4}">
+            </div>
+            <div style="display:flex; gap:0.5rem; justify-content:flex-end;">
+                <button class="btn btn-secondary" id="pinCancelBtn">취소</button>
+                <button class="btn btn-primary" id="pinConfirmBtn">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CRUD 모달 -->
+    <div id="devNoteModal" class="modal">
+        <div class="modal-content">
+            <span class="close" data-close="devNoteModal">&times;</span>
+            <h2 id="devNoteModalTitle">업데이트 추가</h2>
+            <form id="devNoteForm">
+                <input type="hidden" id="noteId">
+                <div class="form-group">
+                    <input type="text" id="noteTitle" placeholder="제목" required>
+                </div>
+                <div class="form-group">
+                    <textarea id="noteContent" placeholder="내용" rows="6" required></textarea>
+                </div>
+                <div class="form-group">
+                    <input type="text" id="noteTags" placeholder="태그 (쉼표로 구분, 예: Firebase, 디자인)">
+                </div>
+                <div style="display:flex; gap:0.5rem; justify-content:flex-end;">
+                    <button type="button" class="btn btn-secondary" id="noteCancelBtn">취소</button>
+                    <button type="submit" class="btn btn-primary" id="noteSaveBtn">저장</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- JavaScript -->
     <script>
-        // 스크롤 애니메이션
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -50px 0px'
-        };
-
+        // 기존 애니메이션 스크립트 유지
+        const observerOptions = { threshold: 0.1, rootMargin: '0px 0px -50px 0px' };
         const observer = new IntersectionObserver(function(entries) {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
@@ -493,24 +541,195 @@ await addDoc(messagesRef, {
                 }
             });
         }, observerOptions);
-
-        // 모든 dev-card에 애니메이션 적용
         document.querySelectorAll('.dev-card').forEach(card => {
             card.style.opacity = '0';
             card.style.transform = 'translateY(30px)';
             card.style.transition = 'all 0.6s ease';
             observer.observe(card);
         });
-
-        // 프로그레스 바 애니메이션
         const progressBars = document.querySelectorAll('.progress-fill');
-        progressBars.forEach(bar => {
-            const width = bar.style.width;
-            bar.style.width = '0%';
-            setTimeout(() => {
-                bar.style.width = width;
-            }, 500);
+        progressBars.forEach(bar => { const width = bar.style.width; bar.style.width = '0%'; setTimeout(() => { bar.style.width = width; }, 500); });
+    </script>
+
+    <!-- CRUD 로직 (Firebase) -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
+        import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyByl8nNi16tW1Y-p4ENLfRUMxryEi6Rli0",
+            authDomain: "introduce-backend.firebaseapp.com",
+            projectId: "introduce-backend",
+            storageBucket: "introduce-backend.firebasestorage.app",
+            messagingSenderId: "280481000866",
+            appId: "1:280481000866:web:deaf62516cca85f41396fb",
+            databaseURL: "https://introduce-backend-default-rtdb.firebaseio.com/"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const listEl = document.getElementById('devNotesList');
+        const addBtn = document.getElementById('addUpdateBtn');
+        const adminStatus = document.getElementById('adminStatus');
+
+        const pinModal = document.getElementById('pinModal');
+        const pinInput = document.getElementById('pinInput');
+        const pinConfirmBtn = document.getElementById('pinConfirmBtn');
+        const pinCancelBtn = document.getElementById('pinCancelBtn');
+
+        const noteModal = document.getElementById('devNoteModal');
+        const noteForm = document.getElementById('devNoteForm');
+        const noteId = document.getElementById('noteId');
+        const noteTitle = document.getElementById('noteTitle');
+        const noteContent = document.getElementById('noteContent');
+        const noteTags = document.getElementById('noteTags');
+        const noteCancelBtn = document.getElementById('noteCancelBtn');
+        const noteModalTitle = document.getElementById('devNoteModalTitle');
+
+        let isAdmin = sessionStorage.getItem('adminUnlocked') === 'true';
+        updateAdminStatus();
+
+        function openModal(el) { el.style.display = 'block'; }
+        function closeModal(el) { el.style.display = 'none'; }
+
+        document.querySelectorAll('.close').forEach(x => {
+            x.addEventListener('click', () => {
+                const target = x.getAttribute('data-close');
+                if (target === 'pinModal') closeModal(pinModal);
+                if (target === 'devNoteModal') closeModal(noteModal);
+            });
         });
+        window.addEventListener('click', (e) => {
+            if (e.target === pinModal) closeModal(pinModal);
+            if (e.target === noteModal) closeModal(noteModal);
+        });
+
+        addBtn.addEventListener('click', () => {
+            if (!isAdmin) { pinInput.value=''; openModal(pinModal); pinInput.focus(); return; }
+            openCreate();
+        });
+
+        pinConfirmBtn.addEventListener('click', () => {
+            if (pinInput.value === '0701') {
+                isAdmin = true;
+                sessionStorage.setItem('adminUnlocked','true');
+                updateAdminStatus();
+                closeModal(pinModal);
+                openCreate();
+            } else {
+                alert('비밀번호가 올바르지 않습니다.');
+            }
+        });
+        pinCancelBtn.addEventListener('click', () => closeModal(pinModal));
+
+        function updateAdminStatus() {
+            adminStatus.textContent = isAdmin ? '관리자 모드' : '';
+        }
+
+        function openCreate() {
+            noteModalTitle.textContent = '업데이트 추가';
+            noteId.value = '';
+            noteTitle.value = '';
+            noteContent.value = '';
+            noteTags.value = '';
+            openModal(noteModal);
+        }
+
+        function openEdit(data) {
+            noteModalTitle.textContent = '업데이트 수정';
+            noteId.value = data.id;
+            noteTitle.value = data.title || '';
+            noteContent.value = data.content || '';
+            noteTags.value = (data.tags || []).join(', ');
+            openModal(noteModal);
+        }
+
+        noteCancelBtn.addEventListener('click', () => closeModal(noteModal));
+
+        noteForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                title: noteTitle.value.trim(),
+                content: noteContent.value.trim(),
+                tags: noteTags.value.trim() ? noteTags.value.split(',').map(t => t.trim()).filter(Boolean) : [],
+                updatedAt: serverTimestamp()
+            };
+            if (!payload.title || !payload.content) return;
+            try {
+                if (noteId.value) {
+                    await updateDoc(doc(db, 'devNotes', noteId.value), payload);
+                } else {
+                    await addDoc(collection(db, 'devNotes'), { ...payload, createdAt: serverTimestamp() });
+                }
+                closeModal(noteModal);
+                await loadNotes();
+            } catch (err) {
+                console.error(err);
+                alert('저장 중 오류가 발생했습니다.');
+            }
+        });
+
+        async function handleDelete(id) {
+            if (!isAdmin) return;
+            if (!confirm('정말 삭제하시겠습니까?')) return;
+            try {
+                await deleteDoc(doc(db, 'devNotes', id));
+                await loadNotes();
+            } catch (err) {
+                console.error(err);
+                alert('삭제 중 오류가 발생했습니다.');
+            }
+        }
+
+        function renderNoteCard(n) {
+            const dateText = n.createdAt?.toDate ? n.createdAt.toDate().toLocaleString() : '';
+            const tags = (n.tags || []).map(t => `<span class="tech-tag">${t}</span>`).join('');
+            return `
+                <div class="dev-card" data-id="${n.id}">
+                    <h3><i class="fas fa-clipboard-list"></i> ${escapeHtml(n.title || '')}</h3>
+                    <div class="date">${dateText}</div>
+                    <div class="content">${escapeHtml(n.content || '').replace(/\n/g,'<br>')}</div>
+                    ${tags ? `<div class="tech-stack" style="margin-top:1rem;">${tags}</div>` : ''}
+                    ${isAdmin ? `
+                    <div class="note-actions">
+                        <button class="btn btn-secondary btn-small" data-action="edit"><i class="fas fa-edit"></i> 수정</button>
+                        <button class="btn btn-secondary btn-small" data-action="delete"><i class="fas fa-trash"></i> 삭제</button>
+                    </div>` : ''}
+                </div>
+            `;
+        }
+
+        function bindCardActions() {
+            if (!isAdmin) return;
+            listEl.querySelectorAll('.dev-card').forEach(card => {
+                const id = card.getAttribute('data-id');
+                const editBtn = card.querySelector('[data-action="edit"]');
+                const delBtn = card.querySelector('[data-action="delete"]');
+                if (editBtn) editBtn.addEventListener('click', () => {
+                    const n = notes.find(x => x.id === id);
+                    if (n) openEdit(n);
+                });
+                if (delBtn) delBtn.addEventListener('click', () => handleDelete(id));
+            });
+        }
+
+        let notes = [];
+        async function loadNotes() {
+            const q = query(collection(db, 'devNotes'), orderBy('createdAt', 'desc'));
+            const snap = await getDocs(q);
+            notes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            listEl.innerHTML = notes.map(renderNoteCard).join('') || '<p style="color:#666;">아직 등록된 업데이트가 없습니다.</p>';
+            bindCardActions();
+        }
+
+        function escapeHtml(str) {
+            return String(str).replace(/[&<>\"']/g, function(m) {
+                return ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[m];
+            });
+        }
+
+        await loadNotes();
     </script>
 </body>
 </html> 

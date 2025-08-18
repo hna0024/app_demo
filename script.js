@@ -2,7 +2,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js";
+import { getStorage, ref, uploadBytes, getDownloadURL, listAll } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -1116,10 +1116,215 @@ function showReading(readingId) {
 }
 
 // ========================================
+// 이미지 갤러리 (Firebase Storage 연동 + 페이지네이션)
+// ========================================
+const GALLERY_TITLES = {
+    portfolio: '포트폴리오 웹사이트 - 갤러리',
+    react: 'React 웹 애플리케이션 - 갤러리',
+    nodejs: 'Node.js 백엔드 API - 갤러리',
+    firebase: 'Firebase 연동 웹앱 - 갤러리',
+    rpa: 'RPA 자동화 시스템 - 갤러리',
+    ai: 'AI 융합 스마트 시스템 - 갤러리',
+    japanese: '일본어 학습 - 갤러리',
+    piano: '피아노 연습 - 갤러리',
+    guitar: '기타 연습 - 갤러리',
+    art: '미술 - 개인 작업물 갤러리'
+};
+
+const galleryState = {
+    currentGalleryId: null,
+    storagePath: '',
+    images: [],
+    currentPage: 1,
+    itemsPerPage: 6
+};
+
+async function openGallery(galleryId) {
+    const modal = document.getElementById('videoModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalBody = document.getElementById('modalBody');
+
+    galleryState.currentGalleryId = galleryId;
+    galleryState.storagePath = `galleries/${galleryId}/`;
+    galleryState.currentPage = 1;
+
+    modalTitle.textContent = GALLERY_TITLES[galleryId] || '이미지 갤러리';
+    modalBody.innerHTML = `
+        <div class="gallery-upload">
+            <input type="file" id="galleryFileInput" class="file-input-hidden" accept="image/*" multiple>
+            <button type="button" class="btn btn-secondary" id="galleryChooseBtn">파일 선택</button>
+            <span class="file-name" id="galleryFileName">선택된 파일 없음</span>
+            <button class="btn btn-primary btn-small" id="galleryUploadBtn">업로드</button>
+        </div>
+        <div class="gallery-grid" id="galleryGrid">
+            <div style="text-align:center; padding:2rem; width:100%">
+                <div class="loading-spinner"></div>
+                <p>이미지를 불러오는 중입니다...</p>
+            </div>
+        </div>
+        <div class="gallery-pagination" id="galleryPagination">
+            <button class="gallery-pagination-btn" id="galleryPrevBtn" disabled>
+                <i class="fas fa-chevron-left"></i> 이전
+            </button>
+            <div class="gallery-pagination-numbers" id="galleryPaginationNumbers"></div>
+            <button class="gallery-pagination-btn" id="galleryNextBtn" disabled>
+                다음 <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    `;
+
+    modal.style.display = 'block';
+
+    try {
+        const listRef = ref(storage, galleryState.storagePath);
+        const res = await listAll(listRef);
+        const urls = await Promise.all(res.items.map(item => getDownloadURL(item)));
+        urls.sort();
+        galleryState.images = urls;
+        renderGalleryPage();
+        attachGalleryUploadHandler();
+    } catch (error) {
+        console.error('갤러리 로드 오류:', error);
+        const grid = document.getElementById('galleryGrid');
+        grid.innerHTML = `
+            <div style="text-align:center; padding:2rem; width:100%">
+                <i class="fas fa-exclamation-triangle" style="font-size:3rem; color:#e74c3c; margin-bottom:1rem;"></i>
+                <p>이미지를 불러올 수 없습니다.</p>
+                <p>Storage 경로를 확인해주세요: ${galleryState.storagePath}</p>
+            </div>
+        `;
+    }
+}
+
+function renderGalleryPage() {
+    const grid = document.getElementById('galleryGrid');
+    const total = galleryState.images.length;
+    if (total === 0) {
+        grid.innerHTML = `
+            <div style="text-align:center; padding:2rem; width:100%">
+                <p>등록된 이미지가 없습니다. 상단의 업로드 버튼으로 이미지를 추가해보세요.</p>
+            </div>
+        `;
+        updateGalleryPagination(0);
+        return;
+    }
+
+    const startIndex = (galleryState.currentPage - 1) * galleryState.itemsPerPage;
+    const endIndex = startIndex + galleryState.itemsPerPage;
+    const current = galleryState.images.slice(startIndex, endIndex);
+
+    grid.innerHTML = current.map(url => `
+        <div class="gallery-item">
+            <img src="${url}" alt="gallery-image" class="gallery-image" loading="lazy" />
+        </div>
+    `).join('');
+
+    updateGalleryPagination(total);
+}
+
+function getTotalGalleryPages(totalItems) {
+    return Math.max(1, Math.ceil(totalItems / galleryState.itemsPerPage));
+}
+
+function updateGalleryPagination(totalItems) {
+    const totalPages = totalItems === 0 ? 1 : getTotalGalleryPages(totalItems);
+    const prevBtn = document.getElementById('galleryPrevBtn');
+    const nextBtn = document.getElementById('galleryNextBtn');
+    const numbers = document.getElementById('galleryPaginationNumbers');
+
+    prevBtn.disabled = galleryState.currentPage === 1 || totalItems === 0;
+    nextBtn.disabled = galleryState.currentPage === totalPages || totalItems === 0;
+
+    numbers.innerHTML = '';
+
+    // 최대 5개 번호 표기 (기존 스타일과 동일한 로직)
+    let startPage = Math.max(1, galleryState.currentPage - 2);
+    let endPage = Math.min(totalPages, galleryState.currentPage + 2);
+    if (endPage - startPage < 4) {
+        if (startPage === 1) {
+            endPage = Math.min(totalPages, startPage + 4);
+        } else {
+            startPage = Math.max(1, endPage - 4);
+        }
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+        const btn = document.createElement('button');
+        btn.className = `gallery-page-number ${i === galleryState.currentPage ? 'active' : ''}`;
+        btn.textContent = i;
+        btn.addEventListener('click', function() {
+            galleryState.currentPage = i;
+            renderGalleryPage();
+        });
+        numbers.appendChild(btn);
+    }
+
+    prevBtn.onclick = function() {
+        if (galleryState.currentPage > 1) {
+            galleryState.currentPage--;
+            renderGalleryPage();
+        }
+    };
+
+    nextBtn.onclick = function() {
+        const totalPages = getTotalGalleryPages(totalItems);
+        if (galleryState.currentPage < totalPages) {
+            galleryState.currentPage++;
+            renderGalleryPage();
+        }
+    };
+}
+
+function attachGalleryUploadHandler() {
+    const fileInput = document.getElementById('galleryFileInput');
+    const uploadBtn = document.getElementById('galleryUploadBtn');
+    const chooseBtn = document.getElementById('galleryChooseBtn');
+    const fileName = document.getElementById('galleryFileName');
+
+    if (!fileInput || !uploadBtn) return;
+
+    if (chooseBtn) {
+        chooseBtn.addEventListener('click', function() {
+            fileInput.click();
+        });
+    }
+
+    fileInput.addEventListener('change', function() {
+        if (!fileInput.files || fileInput.files.length === 0) {
+            fileName.textContent = '선택된 파일 없음';
+            return;
+        }
+        const names = Array.from(fileInput.files).map(f => f.name);
+        fileName.textContent = names.join(', ');
+    });
+
+    uploadBtn.addEventListener('click', async function() {
+        const files = fileInput.files;
+        if (!files || files.length === 0) {
+            showNotification('업로드할 이미지를 선택해주세요.', 'error');
+            return;
+        }
+        try {
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const fileRef = ref(storage, `${galleryState.storagePath}${Date.now()}_${i}_${file.name}`);
+                await uploadBytes(fileRef, file);
+            }
+            showNotification('이미지 업로드 완료! 목록을 새로고침합니다.', 'success');
+            openGallery(galleryState.currentGalleryId);
+        } catch (error) {
+            console.error('이미지 업로드 오류:', error);
+            showNotification('업로드 중 오류가 발생했습니다.', 'error');
+        }
+    });
+}
+
+// ========================================
 // 전역 함수들을 window 객체에 추가
 // ========================================
 window.playVideo = playVideo;
 window.showReading = showReading;
+window.openGallery = openGallery;
 
 // ========================================
 // CSS 애니메이션 추가

@@ -3,6 +3,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebas
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL, listAll } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js";
+import { getDatabase, ref as dbRef, onValue, push, set as dbSet, update as dbUpdate, remove as dbRemove, get as dbGet, child } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -20,6 +21,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
+const rtdb = getDatabase(app);
 
 // Global variables
 let currentUser = null;
@@ -64,6 +66,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initializePagination();
     initializeSkillFilters();
     initializeSkillPagination();
+    initializeReadingCRUD();
 });
 
 // ========================================
@@ -328,6 +331,9 @@ function filterAndPaginateProjects() {
 
     // 페이지네이션 업데이트
     updatePagination(filteredCards.length);
+
+    // 독서 섹션 툴바 표시/숨김
+    updateReadingToolbarVisibility();
 }
 
 // ========================================
@@ -960,26 +966,15 @@ async function playVideo(videoId) {
                 title: '일본어 학습 기록 - 노래 연습',
                 content: `
                     <div style="text-align: center;">
-                        <div class="video-container" style="background: #f8f9fa; padding: 2rem; border-radius: 10px; margin-bottom: 1rem;">
-                            <video 
-                                controls 
-                                class="responsive-video"
-                                preload="metadata"
-                                poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='500' height='300' viewBox='0 0 500 300'%3E%3Crect width='500' height='300' fill='%23e9ecef'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23666' font-family='Arial' font-size='16'%3E일본어 노래 연습 영상%3C/text%3E%3C/svg%3E">
+                        <div class="video-container" style="background: #000; padding: 0; border-radius: 10px; margin-bottom: 1rem;">
+                            <video controls class="responsive-video" preload="metadata" poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='500' height='300' viewBox='0 0 500 300'%3E%3Crect width='500' height='300' fill='%23000'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23aaa' font-family='Arial' font-size='16'%3E일본어 노래 연습 영상%3C/text%3E%3C/svg%3E">
                                 <source src="${videoUrl}" type="video/mp4">
-                                <source src="${videoUrl.replace('.mp4', '.webm')}" type="video/webm">
                                 <p>브라우저가 비디오를 지원하지 않습니다. <a href="${videoUrl}" download>비디오 다운로드</a></p>
                             </video>
-                            <div class="video-info">
-                                <p><strong>일본어 노래 연습 영상</strong></p>
-                                <p>일본어 발음과 억양 연습을 위한 노래 연습 과정입니다.</p>
-                            </div>
                         </div>
-                        <div class="project-details">
-                            <p><strong>연습 곡:</strong> 일본어 팝송</p>
-                            <p><strong>학습 목표:</strong> 발음과 억양 개선</p>
-                            <p><strong>연습 기간:</strong> 3개월</p>
-                            <p><strong>주요 내용:</strong> 일본어 발음, 억양, 리듬감 연습</p>
+                        <div class="video-info">
+                            <p><strong>일본어 노래 연습 영상</strong></p>
+                            <p>Firebase Storage의 videos/sing.mp4에서 실시간 스트리밍됩니다.</p>
                         </div>
                     </div>
                 `
@@ -1113,6 +1108,274 @@ function showReading(readingId) {
         modalBody.innerHTML = reading.content;
         modal.style.display = 'block';
     }
+}
+
+// ========================================
+// 독서 섹션 CRUD (Realtime Database)
+// ========================================
+let readings = {};
+let readingUnsubscribed = false;
+
+function initializeReadingCRUD() {
+    // 툴바 생성 (필터 바로 아래)
+    const filters = document.querySelector('.project-filters');
+    if (!filters || document.getElementById('readingToolbar')) return subscribeReadings();
+
+    const toolbar = document.createElement('div');
+    toolbar.id = 'readingToolbar';
+    toolbar.className = 'admin-toolbar reading-toolbar';
+    toolbar.style.display = 'none';
+    toolbar.innerHTML = `
+        <button id="readingAddBtn" class="btn btn-primary btn-small"><i class="fas fa-plus"></i> 추가</button>
+    `;
+    filters.insertAdjacentElement('afterend', toolbar);
+
+    document.getElementById('readingAddBtn').addEventListener('click', function() {
+        openReadingForm();
+    });
+
+    subscribeReadings();
+}
+
+function updateReadingToolbarVisibility() {
+    const toolbar = document.getElementById('readingToolbar');
+    if (!toolbar) return;
+    toolbar.style.display = currentFilter === 'reading' ? 'flex' : 'none';
+}
+
+function subscribeReadings() {
+    const readingsRef = dbRef(rtdb, 'readings');
+    onValue(readingsRef, snapshot => {
+        readings = snapshot.val() || {};
+        renderReadingCards();
+    }, error => {
+        console.error('독서 데이터 구독 오류:', error);
+    });
+}
+
+function renderReadingCards() {
+    const grid = document.getElementById('projectsGrid');
+    if (!grid) return;
+
+    // 기존 동적 카드 제거
+    grid.querySelectorAll('.project-card.dynamic-reading').forEach(el => el.remove());
+
+    // 데이터 → 카드 생성
+    const entries = Object.entries(readings);
+    const fragment = document.createDocumentFragment();
+    entries.forEach(([id, data]) => {
+        const card = document.createElement('div');
+        card.className = 'project-card dynamic-reading';
+        card.setAttribute('data-category', 'reading');
+        card.setAttribute('data-reading-id', id);
+        card.innerHTML = `
+            <div class="project-image">
+                <i class="fas fa-book"></i>
+            </div>
+            <div class="project-content">
+                <h3>${escapeHtml(data.title || '독서감상문')}</h3>
+                <p>${escapeHtml(data.description || '')}</p>
+                <div class="project-tags">
+                    ${(data.tags || ['독서']).map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('')}
+                </div>
+                <div class="note-actions">
+                    <button class="btn btn-small" data-action="view">감상문 보기</button>
+                    <button class="btn btn-secondary btn-small" data-action="edit">수정</button>
+                    <button class="btn btn-secondary btn-small" data-action="delete">삭제</button>
+                </div>
+            </div>
+        `;
+        fragment.appendChild(card);
+    });
+    grid.appendChild(fragment);
+
+    // 하드코딩된 기존 카드 숨기기 (reading-1 버튼 기준)
+    const staticBtn = grid.querySelector("button[onclick=\"showReading('reading-1')\"]");
+    if (staticBtn) {
+        const staticCard = staticBtn.closest('.project-card');
+        if (staticCard) staticCard.style.display = 'none';
+    }
+
+    // 이벤트 바인딩
+    grid.querySelectorAll('.project-card.dynamic-reading').forEach(card => {
+        const id = card.getAttribute('data-reading-id');
+        const viewBtn = card.querySelector('[data-action="view"]');
+        const editBtn = card.querySelector('[data-action="edit"]');
+        const delBtn = card.querySelector('[data-action="delete"]');
+        if (viewBtn) viewBtn.addEventListener('click', () => showReadingDynamic(id));
+        if (editBtn) editBtn.addEventListener('click', () => openReadingForm(id));
+        if (delBtn) delBtn.addEventListener('click', () => deleteReading(id));
+    });
+
+    // 현재 필터/페이지네이션 갱신
+    filterAndPaginateProjects();
+}
+
+function openReadingForm(id) {
+    const modal = document.getElementById('videoModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalBody = document.getElementById('modalBody');
+
+    const item = id ? readings[id] || {} : {};
+
+    modalTitle.textContent = id ? '독서감상문 수정' : '독서감상문 추가';
+    modalBody.innerHTML = `
+        <form id="readingForm">
+            <div class="form-group">
+                <input type="text" id="readingBookTitle" placeholder="책 제목" value="${escapeHtmlAttr(item.bookTitle || '')}" required>
+            </div>
+            <div class="form-group">
+                <input type="text" id="readingAuthors" placeholder="저자 (쉼표로 구분)" value="${escapeHtmlAttr((item.authors || []).join(', '))}">
+            </div>
+            <div class="form-group">
+                <input type="text" id="readingPublisher" placeholder="출판사" value="${escapeHtmlAttr(item.publisher || '')}">
+            </div>
+            <div class="form-group">
+                <input type="text" id="readingPeriod" placeholder="읽은 기간 (예: 2024년 1월)" value="${escapeHtmlAttr(item.period || '')}">
+            </div>
+            <div class="form-group">
+                <textarea id="readingSummary" placeholder="주요 내용" rows="5" required>${escapeHtml(item.summary || '')}</textarea>
+            </div>
+            <div class="form-group">
+                <textarea id="readingQuote" placeholder="인상 깊은 구절" rows="3">${escapeHtml(item.quote || '')}</textarea>
+            </div>
+            <div class="form-group">
+                <textarea id="readingThoughts" placeholder="나의 생각" rows="6" required>${escapeHtml(item.thoughts || '')}</textarea>
+            </div>
+            <div class="form-group">
+                <input type="number" id="readingRating" placeholder="평점 (1~5)" min="1" max="5" value="${Number(item.rating || 5)}">
+            </div>
+            <div class="form-group">
+                <input type="text" id="readingTags" placeholder="태그 (쉼표로 구분)" value="${escapeHtmlAttr((item.tags || ['독서']).join(', '))}">
+            </div>
+            <div style="display:flex; gap:0.5rem; justify-content:flex-end;">
+                <button type="button" class="btn btn-secondary" id="readingCancelBtn">취소</button>
+                <button type="submit" class="btn btn-primary">저장</button>
+            </div>
+        </form>
+    `;
+    modal.style.display = 'block';
+
+    const form = document.getElementById('readingForm');
+    const cancelBtn = document.getElementById('readingCancelBtn');
+    cancelBtn.addEventListener('click', closeModal);
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const payload = collectReadingPayload();
+        try {
+            if (id) {
+                await dbUpdate(dbRef(rtdb, `readings/${id}`), {
+                    ...payload,
+                    updatedAt: Date.now(),
+                });
+            } else {
+                const newRef = push(dbRef(rtdb, 'readings'));
+                await dbSet(newRef, {
+                    ...payload,
+                    createdAt: Date.now(),
+                    updatedAt: Date.now(),
+                });
+            }
+            closeModal();
+        } catch (err) {
+            console.error('독서감상문 저장 오류:', err);
+            showNotification('저장 중 오류가 발생했습니다.', 'error');
+        }
+    });
+}
+
+function collectReadingPayload() {
+    const bookTitle = document.getElementById('readingBookTitle').value.trim();
+    const authors = document.getElementById('readingAuthors').value.trim()
+        ? document.getElementById('readingAuthors').value.split(',').map(t => t.trim()).filter(Boolean)
+        : [];
+    const publisher = document.getElementById('readingPublisher').value.trim();
+    const period = document.getElementById('readingPeriod').value.trim();
+    const summary = document.getElementById('readingSummary').value.trim();
+    const quote = document.getElementById('readingQuote').value.trim();
+    const thoughts = document.getElementById('readingThoughts').value.trim();
+    const rating = Math.max(1, Math.min(5, Number(document.getElementById('readingRating').value || 5)));
+    const tags = document.getElementById('readingTags').value.trim()
+        ? document.getElementById('readingTags').value.split(',').map(t => t.trim()).filter(Boolean)
+        : ['독서'];
+    // 카드 표시를 위해 제목/설명도 유지
+    const title = `"${bookTitle}" 독서감상문`;
+    const description = summary.slice(0, 100);
+    const content = thoughts;
+    return { title, description, tags, content, bookTitle, authors, publisher, period, summary, quote, thoughts, rating };
+}
+
+async function deleteReading(id) {
+    if (!confirm('정말 삭제하시겠습니까?')) return;
+    try {
+        await dbRemove(dbRef(rtdb, `readings/${id}`));
+        showNotification('삭제되었습니다.', 'success');
+    } catch (err) {
+        console.error('독서감상문 삭제 오류:', err);
+        showNotification('삭제 중 오류가 발생했습니다.', 'error');
+    }
+}
+
+async function showReadingDynamic(id) {
+    const modal = document.getElementById('videoModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalBody = document.getElementById('modalBody');
+
+    try {
+        const snap = await dbGet(dbRef(rtdb, `readings/${id}`));
+        const data = snap.val();
+        if (!data) throw new Error('데이터가 없습니다.');
+        modalTitle.textContent = `"${data.bookTitle || '독서'}" 독서감상문`;
+        const authors = (data.authors || []).join(', ');
+        const stars = renderStarsHtml(Number(data.rating || 5));
+        modalBody.innerHTML = `
+            <div style="text-align: left; line-height: 1.8;">
+                <h3 style="color: #2c3e50; margin-bottom: 1rem;">책 정보</h3>
+                <p><strong>제목:</strong> ${escapeHtml(data.bookTitle || '')}</p>
+                <p><strong>저자:</strong> ${escapeHtml(authors)}</p>
+                <p><strong>출판사:</strong> ${escapeHtml(data.publisher || '')}</p>
+                <p><strong>읽은 기간:</strong> ${escapeHtml(data.period || '')}</p>
+                
+                <h3 style="color: #2c3e50; margin: 2rem 0 1rem 0;">주요 내용</h3>
+                <p>${escapeHtml(data.summary || '')}</p>
+                
+                <h3 style="color: #2c3e50; margin: 2rem 0 1rem 0;">인상 깊은 구절</h3>
+                <blockquote style="background: #f8f9fa; padding: 1rem; border-left: 4px solid #3498db; margin: 1rem 0;">
+                    ${escapeHtml(data.quote || '')}
+                </blockquote>
+                
+                <h3 style="color: #2c3e50; margin: 2rem 0 1rem 0;">나의 생각</h3>
+                <p>${escapeHtml((data.thoughts || '')).replace(/\n/g,'<br>')}</p>
+                
+                <h3 style="color: #2c3e50; margin: 2rem 0 0.5rem 0;">평점</h3>
+                <p style="font-size: 1.2rem; color:#f1c40f;">${stars} <span style="color:#333;">(${Number(data.rating || 5)}/5)</span></p>
+                
+                ${data.conclusion ? `<p style="margin-top: 2rem; font-style: italic; color: #666;">${escapeHtml(data.conclusion)}</p>` : ''}
+            </div>
+        `;
+        modal.style.display = 'block';
+    } catch (error) {
+        console.error('독서감상문 로드 오류:', error);
+        showNotification('감상문을 불러오지 못했습니다.', 'error');
+    }
+}
+
+function renderStarsHtml(n) {
+    const count = Math.max(0, Math.min(5, Number(n || 0)));
+    let stars = '';
+    for (let i = 0; i < count; i++) stars += '★';
+    for (let i = count; i < 5; i++) stars += '☆';
+    return stars;
+}
+
+function escapeHtml(str) {
+    const s = String(str);
+    return s.replace(/[&<>\"']/g, function(m) {
+        return ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[m];
+    });
+}
+function escapeHtmlAttr(str) {
+    return escapeHtml(str).replace(/"/g, '&quot;');
 }
 
 // ========================================

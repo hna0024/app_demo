@@ -554,7 +554,9 @@ await addDoc(messagesRef, {
     <!-- CRUD 로직 (Firebase) -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
-        import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+        import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy, onSnapshot } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+        import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
+        import { getDatabase, ref as rtdbRef, set as rtdbSet, update as rtdbUpdate, remove as rtdbRemove } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyByl8nNi16tW1Y-p4ENLfRUMxryEi6Rli0",
@@ -568,6 +570,8 @@ await addDoc(messagesRef, {
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
+        const rtdb = getDatabase(app);
 
         const listEl = document.getElementById('devNotesList');
         const addBtn = document.getElementById('addUpdateBtn');
@@ -647,6 +651,15 @@ await addDoc(messagesRef, {
 
         noteCancelBtn.addEventListener('click', () => closeModal(noteModal));
 
+        // 익명 인증 후 동작 시작
+        const authReady = new Promise((resolve) => {
+            onAuthStateChanged(auth, (user) => {
+                if (user) resolve(user);
+            });
+        });
+        signInAnonymously(auth).catch((e)=>console.error('Auth error:', e));
+        authReady.then(()=> subscribeNotes());
+
         noteForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const payload = {
@@ -659,14 +672,15 @@ await addDoc(messagesRef, {
             try {
                 if (noteId.value) {
                     await updateDoc(doc(db, 'devNotes', noteId.value), payload);
+                    await mirrorUpdate(noteId.value, payload);
                 } else {
-                    await addDoc(collection(db, 'devNotes'), { ...payload, createdAt: serverTimestamp() });
+                    const res = await addDoc(collection(db, 'devNotes'), { ...payload, createdAt: serverTimestamp() });
+                    await mirrorCreate(res.id, payload);
                 }
                 closeModal(noteModal);
-                await loadNotes();
             } catch (err) {
-                console.error(err);
-                alert('저장 중 오류가 발생했습니다.');
+                console.error('Save error:', err);
+                alert('저장 중 오류가 발생했습니다. 콘솔을 확인해주세요.');
             }
         });
 
@@ -675,10 +689,10 @@ await addDoc(messagesRef, {
             if (!confirm('정말 삭제하시겠습니까?')) return;
             try {
                 await deleteDoc(doc(db, 'devNotes', id));
-                await loadNotes();
+                await mirrorDelete(id);
             } catch (err) {
-                console.error(err);
-                alert('삭제 중 오류가 발생했습니다.');
+                console.error('Delete error:', err);
+                alert('삭제 중 오류가 발생했습니다. 콘솔을 확인해주세요.');
             }
         }
 
@@ -714,13 +728,18 @@ await addDoc(messagesRef, {
             });
         }
 
+        let unsubscribe = null;
         let notes = [];
-        async function loadNotes() {
-            const q = query(collection(db, 'devNotes'), orderBy('createdAt', 'desc'));
-            const snap = await getDocs(q);
-            notes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            listEl.innerHTML = notes.map(renderNoteCard).join('') || '<p style="color:#666;">아직 등록된 업데이트가 없습니다.</p>';
-            bindCardActions();
+        function subscribeNotes() {
+            if (unsubscribe) unsubscribe();
+            const qy = query(collection(db, 'devNotes'), orderBy('createdAt', 'desc'));
+            unsubscribe = onSnapshot(qy, (snap) => {
+                notes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                listEl.innerHTML = notes.map(renderNoteCard).join('') || '<p style="color:#666;">아직 등록된 업데이트가 없습니다.</p>';
+                bindCardActions();
+            }, (err) => {
+                console.error('Subscribe error:', err);
+            });
         }
 
         function escapeHtml(str) {
@@ -729,7 +748,37 @@ await addDoc(messagesRef, {
             });
         }
 
-        await loadNotes();
+        // Realtime Database 미러링
+        async function mirrorCreate(id, data) {
+            try {
+                await authReady;
+                await rtdbSet(rtdbRef(rtdb, `devNotes/${id}`), {
+                    title: data.title || '',
+                    content: data.content || '',
+                    tags: data.tags || [],
+                    createdAt: Date.now(),
+                    updatedAt: Date.now()
+                });
+            } catch (e) { console.warn('RT mirror create failed:', e); }
+        }
+        async function mirrorUpdate(id, data) {
+            try {
+                await authReady;
+                await rtdbUpdate(rtdbRef(rtdb, `devNotes/${id}`), {
+                    title: data.title || '',
+                    content: data.content || '',
+                    tags: data.tags || [],
+                    updatedAt: Date.now()
+                });
+            } catch (e) { console.warn('RT mirror update failed:', e); }
+        }
+        async function mirrorDelete(id) {
+            try {
+                await authReady;
+                await rtdbRemove(rtdbRef(rtdb, `devNotes/${id}`));
+            } catch (e) { console.warn('RT mirror delete failed:', e); }
+        }
+
     </script>
 </body>
 </html> 

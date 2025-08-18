@@ -1160,3 +1160,20 @@ section {
 	display: flex;
 	gap: 0.5rem;
 } 
+
+/* Reading toolbar alignment */
+.reading-toolbar {
+	justify-content: flex-end;
+} 
+
+/* Reading modal tweaks */
+blockquote {
+	background: #f8f9fa;
+	padding: 1rem;
+	border-left: 4px solid #3498db;
+	margin: 1rem 0;
+}
+.reading-stars {
+	color: #f1c40f;
+	letter-spacing: 2px;
+} 

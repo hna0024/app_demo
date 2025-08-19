@@ -1460,7 +1460,9 @@ function filterAndPaginateGallery() {
             <div class="gallery-actions">
                 <button class="btn btn-secondary btn-small" data-action="delete-image" data-id="${item.id}" data-path="${item.storagePath}">삭제</button>
             </div>
-            <img src="${item.url}" alt="gallery-image" class="gallery-image" loading="lazy" />
+            <div class="gallery-frame">
+                <img src="${item.url}" alt="gallery-image" class="gallery-image" loading="lazy" />
+            </div>
         </div>
     `).join('');
 

@@ -2,7 +2,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
-import { getStorage, ref, uploadBytes, getDownloadURL, listAll } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js";
+import { getStorage, ref, uploadBytes, getDownloadURL, listAll, deleteObject } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js";
 import { getDatabase, ref as dbRef, onValue, push, set as dbSet, update as dbUpdate, remove as dbRemove, get as dbGet, child } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js";
 
 // Firebase configuration
@@ -22,6 +22,10 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 const rtdb = getDatabase(app);
+
+// Auth readiness promise
+let authReadyResolve;
+const authReady = new Promise((resolve) => { authReadyResolve = resolve; });
 
 // Global variables
 let currentUser = null;
@@ -82,6 +86,7 @@ async function initializeFirebase() {
             if (user) {
                 currentUser = user;
                 console.log('Firebase 인증 완료:', user.uid);
+                try { authReadyResolve && authReadyResolve(user); } catch (_) {}
             } else {
                 console.log('사용자 로그아웃');
             }
@@ -620,6 +625,8 @@ function closeModal() {
     }
     
     modal.style.display = 'none';
+    // 비디오 목록 구독 해제
+    if (videoUnsubscribe) { try { videoUnsubscribe(); } catch (_) {} videoUnsubscribe = null; }
 }
 
 // ========================================
@@ -818,237 +825,146 @@ function showNotification(message, type) {
 }
 
 // ========================================
-// 비디오 재생 함수 (Firebase Storage 연동)
+// 비디오 재생 함수 (Firebase Storage 연동) - 동적 업로드/목록/삭제
 // ========================================
+const VIDEO_KEYS = {
+	'portfolio-video': 'portfolio',
+	'react-video': 'react',
+	'nodejs-video': 'nodejs',
+	'firebase-video': 'firebase',
+	'rpa-video': 'rpa',
+	'ai-video': 'ai',
+	'guitar-video': 'guitar',
+	'piano-video': 'piano',
+	'japanese-video': 'japanese'
+};
+
+let videoUnsubscribe = null;
+
 async function playVideo(videoId) {
-    const modal = document.getElementById('videoModal');
-    const modalTitle = document.getElementById('modalTitle');
-    const modalBody = document.getElementById('modalBody');
-    
-    // 기존 비디오 정지
-    const existingVideo = modal.querySelector('video');
-    if (existingVideo) {
-        existingVideo.pause();
-    }
-    
-    // 로딩 표시
-    modalTitle.textContent = '로딩 중...';
-    modalBody.innerHTML = `
-        <div style="text-align: center; padding: 2rem;">
-            <div class="loading-spinner"></div>
-            <p>비디오를 불러오는 중입니다...</p>
-        </div>
-    `;
-    modal.style.display = 'block';
-    
-    try {
-        // Firebase Storage에서 비디오 URL 가져오기
-        let videoUrl = '';
-        if (videoId === 'japanese-video') {
-            const videoRef = ref(storage, 'videos/sing.mp4');
-            videoUrl = await getDownloadURL(videoRef);
-        }
-        
-        // 비디오 데이터 (Firebase에서 동적으로 로드 가능)
-        const videoData = {
-            'portfolio-video': {
-                title: '포트폴리오 웹사이트 개발',
-                content: `
-                    <div style="text-align: center;">
-                        <div style="background: #f8f9fa; padding: 2rem; border-radius: 10px; margin-bottom: 1rem;">
-                            <i class="fas fa-laptop-code" style="font-size: 3rem; color: #3498db; margin-bottom: 1rem;"></i>
-                            <p>포트폴리오 웹사이트 개발 과정</p>
-                            <p>HTML, CSS, JavaScript를 활용한 반응형 웹사이트 개발 과정입니다.</p>
-                        </div>
-                        <p><strong>프로젝트:</strong> 개인 포트폴리오 웹사이트</p>
-                        <p><strong>기술 스택:</strong> HTML, CSS, JavaScript, Firebase</p>
-                        <p><strong>개발 기간:</strong> 2주</p>
-                        <p><strong>주요 기능:</strong> 반응형 디자인, Firebase 연동, 모달 창, 애니메이션</p>
-                    </div>
-                `
-            },
-            'react-video': {
-                title: 'React 웹 애플리케이션 개발',
-                content: `
-                    <div style="text-align: center;">
-                        <div style="background: #f8f9fa; padding: 2rem; border-radius: 10px; margin-bottom: 1rem;">
-                            <i class="fab fa-react" style="font-size: 3rem; color: #3498db; margin-bottom: 1rem;"></i>
-                            <p>React 웹 애플리케이션 개발 과정</p>
-                            <p>React를 활용한 동적 웹 애플리케이션 개발 과정입니다.</p>
-                        </div>
-                        <p><strong>프로젝트:</strong> React 웹 애플리케이션</p>
-                        <p><strong>기술 스택:</strong> React, JavaScript, CSS, API</p>
-                        <p><strong>개발 기간:</strong> 3개월</p>
-                        <p><strong>주요 기능:</strong> 컴포넌트 기반 개발, 상태 관리, API 연동</p>
-                    </div>
-                `
-            },
-            'nodejs-video': {
-                title: 'Node.js 백엔드 API 개발',
-                content: `
-                    <div style="text-align: center;">
-                        <div style="background: #f8f9fa; padding: 2rem; border-radius: 10px; margin-bottom: 1rem;">
-                            <i class="fab fa-node-js" style="font-size: 3rem; color: #3498db; margin-bottom: 1rem;"></i>
-                            <p>Node.js 백엔드 API 개발 과정</p>
-                            <p>Express.js를 활용한 RESTful API 서버 개발 과정입니다.</p>
-                        </div>
-                        <p><strong>프로젝트:</strong> RESTful API 서버</p>
-                        <p><strong>기술 스택:</strong> Node.js, Express, MongoDB</p>
-                        <p><strong>개발 기간:</strong> 1개월</p>
-                        <p><strong>주요 기능:</strong> CRUD API, 데이터베이스 연동, 인증 시스템</p>
-                    </div>
-                `
-            },
-            'firebase-video': {
-                title: 'Firebase 연동 웹앱 개발',
-                content: `
-                    <div style="text-align: center;">
-                        <div style="background: #f8f9fa; padding: 2rem; border-radius: 10px; margin-bottom: 1rem;">
-                            <i class="fas fa-fire" style="font-size: 3rem; color: #3498db; margin-bottom: 1rem;"></i>
-                            <p>Firebase 연동 웹앱 개발 과정</p>
-                            <p>Firebase 서비스를 활용한 풀스택 웹 애플리케이션 개발 과정입니다.</p>
-                        </div>
-                        <p><strong>프로젝트:</strong> Firebase 연동 웹앱</p>
-                        <p><strong>기술 스택:</strong> Firebase, Authentication, Firestore, Storage</p>
-                        <p><strong>개발 기간:</strong> 2개월</p>
-                        <p><strong>주요 기능:</strong> 사용자 인증, 실시간 데이터베이스, 파일 업로드</p>
-                    </div>
-                `
-            },
-            'rpa-video': {
-                title: 'RPA 자동화 시스템 개발',
-                content: `
-                    <div style="text-align: center;">
-                        <div style="background: #f8f9fa; padding: 2rem; border-radius: 10px; margin-bottom: 1rem;">
-                            <i class="fas fa-robot" style="font-size: 3rem; color: #3498db; margin-bottom: 1rem;"></i>
-                            <p>RPA 자동화 시스템 개발 과정</p>
-                            <p>Brity RPA와 OutSystems를 활용한 업무 자동화 시스템 개발 과정입니다.</p>
-                        </div>
-                        <p><strong>프로젝트:</strong> 업무 자동화 시스템</p>
-                        <p><strong>기술 스택:</strong> Brity RPA, OutSystems, Low-Code</p>
-                        <p><strong>개발 기간:</strong> 3개월</p>
-                        <p><strong>주요 기능:</strong> 업무 프로세스 자동화, 워크플로우 관리</p>
-                    </div>
-                `
-            },
-            'ai-video': {
-                title: 'AI 융합 스마트 시스템 개발',
-                content: `
-                    <div style="text-align: center;">
-                        <div style="background: #f8f9fa; padding: 2rem; border-radius: 10px; margin-bottom: 1rem;">
-                            <i class="fas fa-brain" style="font-size: 3rem; color: #3498db; margin-bottom: 1rem;"></i>
-                            <p>AI 융합 스마트 시스템 개발 과정</p>
-                            <p>인공지능 기반 스마트 관리시스템 개발 과정입니다.</p>
-                        </div>
-                        <p><strong>프로젝트:</strong> AI 스마트 관리시스템</p>
-                        <p><strong>기술 스택:</strong> Python, AI, 머신러닝, 데이터 분석</p>
-                        <p><strong>개발 기간:</strong> 4개월</p>
-                        <p><strong>주요 기능:</strong> 데이터 분석, 예측 모델, 스마트 관리</p>
-                    </div>
-                `
-            },
-            'guitar-video': {
-                title: '기타 연주 - "Hotel California"',
-                content: `
-                    <div style="text-align: center;">
-                        <div style="background: #f8f9fa; padding: 2rem; border-radius: 10px; margin-bottom: 1rem;">
-                            <i class="fas fa-video" style="font-size: 3rem; color: #3498db; margin-bottom: 1rem;"></i>
-                            <p>여기에 추후 비디오 삽입 예정</p>
-                            <p>직접 업로드된 비디오를 여기에 표시 예정</p>
-                        </div>
-                        <p><strong>연주곡:</strong> Hotel California - Eagles</p>
-                        <p><strong>연주 시간:</strong> 6분 30초</p>
-                        <p><strong>설명:</strong> 클래식 기타로 연주한 Hotel California입니다. 3개월간 연습한 결과물입니다.</p>
-                    </div>
-                `
-            },
-            'japanese-video': {
-                title: '일본어 학습 기록 - 노래 연습',
-                content: `
-                    <div style="text-align: center;">
-                        <div class="video-container" style="background: #000; padding: 0; border-radius: 10px; margin-bottom: 1rem;">
-                            <video controls class="responsive-video" preload="metadata" poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='500' height='300' viewBox='0 0 500 300'%3E%3Crect width='500' height='300' fill='%23000'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23aaa' font-family='Arial' font-size='16'%3E일본어 노래 연습 영상%3C/text%3E%3C/svg%3E">
-                                <source src="${videoUrl}" type="video/mp4">
-                                <p>브라우저가 비디오를 지원하지 않습니다. <a href="${videoUrl}" download>비디오 다운로드</a></p>
-                            </video>
-                        </div>
-                        <div class="video-info">
-                            <p><strong>일본어 노래 연습 영상</strong></p>
-                            <p>Firebase Storage의 videos/sing.mp4에서 실시간 스트리밍됩니다.</p>
-                        </div>
-                    </div>
-                `
-            },
-            'piano-video': {
-                title: '피아노 연주 - "Rivers"',
-                content: `
-                    <div style="text-align: center;">
-                        <div style="background: #f8f9fa; padding: 2rem; border-radius: 10px; margin-bottom: 1rem;">
-                            <i class="fas fa-music" style="font-size: 3rem; color: #3498db; margin-bottom: 1rem;"></i>
-                            <p>피아노 연주 영상</p>
-                            <p>직접 작곡한 곡을 연주한 영상입니다.</p>
-                        </div>
-                        <p><strong>연주곡:</strong> Rivers - Hanna Lee</p>
-                        <p><strong>연주 시간:</strong> 2분 15초</p>
-                        <p><strong>설명:</strong> 피아노 독학 1개월차에 연주한 곡입니다.</p>
-                    </div>
-                `
-            },
-            'art-video': {
-                title: '미술 포트폴리오',
-                content: `
-                    <div style="text-align: center;">
-                        <div style="background: #f8f9fa; padding: 2rem; border-radius: 10px; margin-bottom: 1rem;">
-                            <i class="fas fa-palette" style="font-size: 3rem; color: #3498db; margin-bottom: 1rem;"></i>
-                            <p>미술 포트폴리오</p>
-                            <p>전시회와 입시용 미술 작업물들을 담은 포트폴리오입니다.</p>
-                        </div>
-                        <p><strong>작품 종류:</strong> 소묘, 유화, 수채화, 디자인</p>
-                        <p><strong>작업 기간:</strong> 4년</p>
-                        <p><strong>설명:</strong> 패션디자인과 재학 중 제작한 다양한 미술 작품들입니다.</p>
-                    </div>
-                `
-            }
-        };
-        
-        const video = videoData[videoId];
-        if (video) {
-            modalTitle.textContent = video.title;
-            modalBody.innerHTML = video.content;
-            
-            // 비디오 로드 완료 후 컨트롤 활성화
-            const newVideo = modal.querySelector('video');
-            if (newVideo) {
-                newVideo.addEventListener('loadedmetadata', function() {
-                    console.log('비디오 로드 완료:', videoId);
-                });
-                
-                newVideo.addEventListener('error', function(e) {
-                    console.error('비디오 로드 오류:', e);
-                    const videoContainer = newVideo.closest('.video-container');
-                    if (videoContainer) {
-                        videoContainer.innerHTML = `
-                            <div style="text-align: center; padding: 2rem; color: #666;">
-                                <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #e74c3c; margin-bottom: 1rem;"></i>
-                                <p>비디오를 불러올 수 없습니다.</p>
-                                <p>파일 경로를 확인해주세요.</p>
-                            </div>
-                        `;
-                    }
-                });
-            }
-        }
-    } catch (error) {
-        console.error('비디오 로드 오류:', error);
-        modalTitle.textContent = '오류 발생';
-        modalBody.innerHTML = `
-            <div style="text-align: center; padding: 2rem; color: #666;">
-                <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #e74c3c; margin-bottom: 1rem;"></i>
-                <p>비디오를 불러오는 중 오류가 발생했습니다.</p>
-                <p>잠시 후 다시 시도해주세요.</p>
-            </div>
-        `;
-    }
+	const modal = document.getElementById('videoModal');
+	const modalTitle = document.getElementById('modalTitle');
+	const modalBody = document.getElementById('modalBody');
+
+	// 기존 비디오 정지
+	const existingVideo = modal.querySelector('video');
+	if (existingVideo) {
+		existingVideo.pause();
+	}
+
+	const key = VIDEO_KEYS[videoId];
+	if (!key) {
+		console.warn('알 수 없는 비디오 키:', videoId);
+		return;
+	}
+
+	// 모달 UI
+	modalTitle.textContent = '영상 관리';
+	modalBody.innerHTML = `
+		<div class="gallery-upload" style="display:flex; flex-wrap:wrap; align-items:center;">
+			<input type="file" id="videoFileInput" class="file-input-hidden" accept="video/*">
+			<button type="button" class="btn btn-secondary" id="videoChooseBtn">파일 선택</button>
+			<input type="text" id="videoTitleInput" placeholder="영상 제목" style="flex:1; min-width:220px; padding:10px; border:2px solid #e9ecef; border-radius:8px;">
+			<span class="file-name" id="videoFileName">선택된 파일 없음</span>
+			<button class="btn btn-primary btn-small" id="videoUploadBtn">업로드</button>
+		</div>
+		<div class="video-grid" id="videoList">
+			<div style="text-align:center; padding:2rem; width:100%">
+				<div class="loading-spinner"></div>
+				<p>영상을 불러오는 중입니다...</p>
+			</div>
+		</div>
+	`;
+	modal.style.display = 'block';
+
+	// 파일 선택/업로드 핸들러
+	const chooseBtn = document.getElementById('videoChooseBtn');
+	const fileInput = document.getElementById('videoFileInput');
+	const fileName = document.getElementById('videoFileName');
+	const uploadBtn = document.getElementById('videoUploadBtn');
+	const titleInput = document.getElementById('videoTitleInput');
+	if (chooseBtn) chooseBtn.addEventListener('click', () => fileInput.click());
+	fileInput.addEventListener('change', () => {
+		fileName.textContent = fileInput.files && fileInput.files[0] ? fileInput.files[0].name : '선택된 파일 없음';
+	});
+	uploadBtn.addEventListener('click', async () => {
+		const file = fileInput.files && fileInput.files[0];
+		if (!file) { showNotification('업로드할 영상을 선택해주세요.', 'error'); return; }
+		try {
+			await authReady; // ensure authenticated before write
+			const safeTitle = titleInput.value.trim() || file.name;
+			const storagePath = `videos/${key}/${Date.now()}_${file.name}`;
+			const sref = ref(storage, storagePath);
+			await uploadBytes(sref, file);
+			const itemRef = push(dbRef(rtdb, `videos/${key}`));
+			await dbSet(itemRef, {
+				title: safeTitle,
+				storagePath: storagePath,
+				createdAt: Date.now()
+			});
+			showNotification('영상이 업로드되었습니다.', 'success');
+			fileInput.value = '';
+			titleInput.value = '';
+			fileName.textContent = '선택된 파일 없음';
+		} catch (e) {
+			console.error('영상 업로드 오류:', e);
+			showNotification('업로드 중 오류가 발생했습니다.', 'error');
+		}
+	});
+
+	// 기존 구독 해제 후 새로 구독
+	if (videoUnsubscribe) { try { videoUnsubscribe(); } catch (_) {} videoUnsubscribe = null; }
+	videoUnsubscribe = onValue(dbRef(rtdb, `videos/${key}`), async (snap) => {
+		const list = snap.val() || {};
+		const arr = Object.entries(list).sort((a,b)=> (b[1].createdAt||0)-(a[1].createdAt||0));
+		const items = await Promise.all(arr.map(async ([id, data]) => {
+			let url = '';
+			try { url = await getDownloadURL(ref(storage, data.storagePath)); } catch (e) { console.warn('URL 조회 실패:', data.storagePath, e); }
+			return { id, url, title: data.title || '영상', storagePath: data.storagePath };
+		}));
+		renderVideoList(items, key);
+	});
+}
+
+function renderVideoList(items, key) {
+	const listEl = document.getElementById('videoList');
+	if (!listEl) return;
+	if (!items.length) {
+		listEl.innerHTML = `<div style="text-align:center; color:#666; padding:2rem;">등록된 영상이 없습니다. 상단에서 업로드해 보세요.</div>`;
+		return;
+	}
+	listEl.innerHTML = items.map(item => `
+		<div class="video-item">
+			<div class="video-container" style="background:#000; border-radius:10px; overflow:hidden;">
+				<video controls class="responsive-video" preload="metadata">
+					${item.url ? `<source src="${item.url}" type="video/mp4">` : ''}
+				</video>
+			</div>
+			<div class="video-meta">
+				<div class="video-title">${escapeHtml(item.title)}</div>
+				<div class="video-actions">
+					<button class="btn btn-secondary btn-small" data-action="delete" data-id="${item.id}" data-path="${item.storagePath}" data-key="${key}">삭제</button>
+				</div>
+			</div>
+		</div>
+	`).join('');
+
+	listEl.querySelectorAll('[data-action="delete"]').forEach(btn => {
+		btn.addEventListener('click', async () => {
+			const id = btn.getAttribute('data-id');
+			const path = btn.getAttribute('data-path');
+			const vkey = btn.getAttribute('data-key');
+			if (!confirm('영상을 삭제하시겠습니까?')) return;
+			try {
+				await deleteObject(ref(storage, path));
+				await dbRemove(dbRef(rtdb, `videos/${vkey}/${id}`));
+				showNotification('삭제되었습니다.', 'success');
+			} catch (e) {
+				console.error('영상 삭제 오류:', e);
+				showNotification('삭제 중 오류가 발생했습니다.', 'error');
+			}
+		});
+	});
 }
 
 // ========================================
@@ -1568,6 +1484,7 @@ function attachGalleryUploadHandler() {
             return;
         }
         try {
+            await authReady; // ensure authenticated before write
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
                 const fileRef = ref(storage, `${galleryState.storagePath}${Date.now()}_${i}_${file.name}`);

@@ -1177,3 +1177,42 @@ blockquote {
 	color: #f1c40f;
 	letter-spacing: 2px;
 } 
+
+/* Video list styles (modal) */
+.video-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+	gap: 1rem;
+}
+.video-item {
+	background: #f8f9fa;
+	border-radius: 10px;
+	box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+	padding: 8px;
+}
+.video-meta {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	margin-top: 0.5rem;
+}
+.video-title { color:#2c3e50; font-weight: 600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.video-actions { display:flex; gap:0.5rem; } 
+
+/* Make secondary buttons visible on white modal background */
+.modal .btn.btn-secondary {
+	border-color: #3498db;
+	color: #3498db;
+	background: transparent;
+}
+.modal .btn.btn-secondary:hover {
+	background: #3498db;
+	color: #fff;
+	transform: translateY(-2px);
+}
+
+/* Upload row tweaks */
+.gallery-upload {
+	gap: 0.75rem;
+} 

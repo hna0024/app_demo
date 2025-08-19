@@ -627,6 +627,8 @@ function closeModal() {
     modal.style.display = 'none';
     // 비디오 목록 구독 해제
     if (videoUnsubscribe) { try { videoUnsubscribe(); } catch (_) {} videoUnsubscribe = null; }
+    // 갤러리 구독 해제
+    if (galleryUnsubscribe) { try { galleryUnsubscribe(); } catch (_) {} galleryUnsubscribe = null; }
 }
 
 // ========================================
@@ -842,16 +844,16 @@ const VIDEO_KEYS = {
 let videoUnsubscribe = null;
 
 async function playVideo(videoId) {
-	const modal = document.getElementById('videoModal');
-	const modalTitle = document.getElementById('modalTitle');
-	const modalBody = document.getElementById('modalBody');
-
-	// 기존 비디오 정지
-	const existingVideo = modal.querySelector('video');
-	if (existingVideo) {
-		existingVideo.pause();
-	}
-
+    const modal = document.getElementById('videoModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalBody = document.getElementById('modalBody');
+    
+    // 기존 비디오 정지
+    const existingVideo = modal.querySelector('video');
+    if (existingVideo) {
+        existingVideo.pause();
+    }
+    
 	const key = VIDEO_KEYS[videoId];
 	if (!key) {
 		console.warn('알 수 없는 비디오 키:', videoId);
@@ -860,7 +862,7 @@ async function playVideo(videoId) {
 
 	// 모달 UI
 	modalTitle.textContent = '영상 관리';
-	modalBody.innerHTML = `
+    modalBody.innerHTML = `
 		<div class="gallery-upload" style="display:flex; flex-wrap:wrap; align-items:center;">
 			<input type="file" id="videoFileInput" class="file-input-hidden" accept="video/*">
 			<button type="button" class="btn btn-secondary" id="videoChooseBtn">파일 선택</button>
@@ -870,13 +872,13 @@ async function playVideo(videoId) {
 		</div>
 		<div class="video-grid" id="videoList">
 			<div style="text-align:center; padding:2rem; width:100%">
-				<div class="loading-spinner"></div>
+            <div class="loading-spinner"></div>
 				<p>영상을 불러오는 중입니다...</p>
 			</div>
-		</div>
-	`;
-	modal.style.display = 'block';
-
+        </div>
+    `;
+    modal.style.display = 'block';
+    
 	// 파일 선택/업로드 핸들러
 	const chooseBtn = document.getElementById('videoChooseBtn');
 	const fileInput = document.getElementById('videoFileInput');
@@ -900,7 +902,8 @@ async function playVideo(videoId) {
 			await dbSet(itemRef, {
 				title: safeTitle,
 				storagePath: storagePath,
-				createdAt: Date.now()
+				createdAt: Date.now(),
+				createdDate: getCurrentDateString()
 			});
 			showNotification('영상이 업로드되었습니다.', 'success');
 			fileInput.value = '';
@@ -938,15 +941,15 @@ function renderVideoList(items, key) {
 			<div class="video-container" style="background:#000; border-radius:10px; overflow:hidden;">
 				<video controls class="responsive-video" preload="metadata">
 					${item.url ? `<source src="${item.url}" type="video/mp4">` : ''}
-				</video>
-			</div>
+                            </video>
+                            </div>
 			<div class="video-meta">
 				<div class="video-title">${escapeHtml(item.title)}</div>
 				<div class="video-actions">
 					<button class="btn btn-secondary btn-small" data-action="delete" data-id="${item.id}" data-path="${item.storagePath}" data-key="${key}">삭제</button>
-				</div>
-			</div>
-		</div>
+                        </div>
+                        </div>
+                    </div>
 	`).join('');
 
 	listEl.querySelectorAll('[data-action="delete"]').forEach(btn => {
@@ -987,9 +990,10 @@ function showReading(readingId) {
                     <p><strong>읽은 기간:</strong> 2024년 1월</p>
                     
                     <h3 style="color: #2c3e50; margin: 2rem 0 1rem 0;">주요 내용</h3>
-                    <p>이 책은 아들러 심리학을 기반으로 한 철학서로, "자유롭게 살기 위한 용기"에 대해 다룹니다. 
-                    과거의 경험에 얽매이지 않고, 타인의 시선을 신경 쓰지 않으며, 현재를 살아가는 방법에 대해 
-                    청년과 철학자의 대화 형식으로 설명합니다.</p>
+                    <p>이 책은 아들러 심리학을 바탕으로, “자유롭게 살기 위한 용기”가 무엇인지 풀어낸 철학 대화록이다. 
+                    철학자와 청년의 대화를 통해 과거 경험의 굴레에서 벗어나, 타인의 시선이 아닌 자신의 선택으로 살아가는 방법을 제시한다.
+                    핵심은 "과제의 분리"다. 내가 감당할 수 있는 것과 감당할 수 없는 것을 구분하고, 
+                    내 몫에 집중할 때 비로소 진정한 자유와 평온을 얻을 수 있다는 메시지를 담고 있다.</p>
                     
                     <h3 style="color: #2c3e50; margin: 2rem 0 1rem 0;">인상 깊은 구절</h3>
                     <blockquote style="background: #f8f9fa; padding: 1rem; border-left: 4px solid #3498db; margin: 1rem 0;">
@@ -997,21 +1001,25 @@ function showReading(readingId) {
                     </blockquote>
                     
                     <h3 style="color: #2c3e50; margin: 2rem 0 1rem 0;">나의 생각</h3>
-                    <p>이 책을 읽으면서 가장 큰 깨달음은 "자유는 용기를 필요로 한다"는 것이었습니다. 
-                    우리는 종종 타인의 시선을 두려워하고, 과거의 실패에 얽매여 현재를 제대로 살지 못합니다. 
-                    하지만 진정한 자유는 과거나 타인에게서 오는 것이 아니라, 자신의 선택과 행동에서 온다는 것을 
-                    이 책을 통해 배웠습니다.</p>
+                    <p>이 책을 읽으며 가장 크게 남은 울림은 "자유는 곧 용기의 다른 이름"이라는 점이었다.
+                    우리는 종종 타인의 평가나 과거의 실수에 매여 현재를 충분히 살지 못한다. 
+                    하지만 이 책은 그 굴레에서 벗어나는 첫걸음이 나 스스로 선택할 용기를 갖는 것임을 일깨워줬다.
+                    </p>
                     
-                    <p>특히 "과제의 분리" 개념이 인상적이었습니다. 내가 할 수 있는 것과 할 수 없는 것을 
-                    명확히 구분하고, 내가 통제할 수 있는 것에만 집중하는 것이 중요하다는 점이 
-                    일상생활에서 실천하기 어렵지만 매우 유용한 지혜라고 생각합니다.</p>
+                    <p>특히 “과제의 분리” 개념은 내게 오래 남을 지혜라고 확신한다. 
+                    누군가의 인정이나 반응은 내가 통제할 수 없는 영역임을 인정하고, 
+                    오직 나의 태도와 행동에 집중하는 것. 
+                    단순하지만 실천하기 어려운 이 원칙은 관계에서 자율성과 건강한 거리를 지켜내는 힘이 된다고 느꼈다.
+                    결국 이 책은 “나를 더 선명하게 살아가는 방법”에 관한 안내서였다. 
+                    과거에 얽매이지 않고, 타인의 시선에 흔들리지 않으며, 지금 이 순간 내가 나답게 서 있을 수 있는 용기. 
+                    그 용기를 잃지 않는다면, 앞으로의 어떤 관계나 상황에서도 흔들리지 않는 내적 자유를 지킬 수 있으리라 확신한다.</p>
                     
                     <h3 style="color: #2c3e50; margin: 2rem 0 1rem 0;">평점</h3>
                     <p style="font-size: 1.2rem;">⭐⭐⭐⭐⭐ (5/5)</p>
                     
                     <p style="margin-top: 2rem; font-style: italic; color: #666;">
-                        이 책은 인생의 방향을 다시 생각해보게 만드는 강력한 메시지를 담고 있습니다. 
-                        특히 20대 후반에서 30대 초반의 청년들에게 추천하고 싶은 책입니다.
+                        삶의 태도를 단순히 위로하는 차원이 아니라, 근본적인 전환을 요구하는 책이었다.
+                        자신을 더 깊이 이해하고 싶거나, 인간관계에서 불필요한 무게를 내려놓고 싶은 청년들에게 꼭 권하고 싶다.
                     </p>
                 </div>
             `
@@ -1094,10 +1102,10 @@ function renderReadingCards() {
                 <div class="project-tags">
                     ${(data.tags || ['독서']).map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('')}
                 </div>
+                <button class="btn btn-small" data-action="view">감상문 보기</button>
                 <div class="note-actions">
-                    <button class="btn btn-small" data-action="view">감상문 보기</button>
-                    <button class="btn btn-secondary btn-small" data-action="edit">수정</button>
-                    <button class="btn btn-secondary btn-small" data-action="delete">삭제</button>
+                    <button class="btn btn-secondary btn-small" data-action="edit"><i class="fas fa-edit"></i> 수정</button>
+                    <button class="btn btn-secondary btn-small" data-action="delete"><i class="fas fa-trash"></i> 삭제</button>
                 </div>
             </div>
         `;
@@ -1162,6 +1170,9 @@ function openReadingForm(id) {
                 <input type="number" id="readingRating" placeholder="평점 (1~5)" min="1" max="5" value="${Number(item.rating || 5)}">
             </div>
             <div class="form-group">
+                <textarea id="readingConclusion" placeholder="결론/추천 문구" rows="3">${escapeHtml(item.conclusion || '')}</textarea>
+            </div>
+            <div class="form-group">
                 <input type="text" id="readingTags" placeholder="태그 (쉼표로 구분)" value="${escapeHtmlAttr((item.tags || ['독서']).join(', '))}">
             </div>
             <div style="display:flex; gap:0.5rem; justify-content:flex-end;">
@@ -1189,6 +1200,7 @@ function openReadingForm(id) {
                 await dbSet(newRef, {
                     ...payload,
                     createdAt: Date.now(),
+                    createdDate: getCurrentDateString(),
                     updatedAt: Date.now(),
                 });
             }
@@ -1211,14 +1223,16 @@ function collectReadingPayload() {
     const quote = document.getElementById('readingQuote').value.trim();
     const thoughts = document.getElementById('readingThoughts').value.trim();
     const rating = Math.max(1, Math.min(5, Number(document.getElementById('readingRating').value || 5)));
+    const conclusionInput = document.getElementById('readingConclusion').value.trim();
+    const defaultConclusion = '삶의 태도를 단순히 위로하는 차원이 아니라 스스로 생각하고 실천하도록 자극하는 힘이 있는 책이다. 같은 고민을 하고 있는 이들에게 꼭 권하고 싶다.';
+    const conclusion = conclusionInput || defaultConclusion;
     const tags = document.getElementById('readingTags').value.trim()
         ? document.getElementById('readingTags').value.split(',').map(t => t.trim()).filter(Boolean)
         : ['독서'];
-    // 카드 표시를 위해 제목/설명도 유지
     const title = `"${bookTitle}" 독서감상문`;
     const description = summary.slice(0, 100);
     const content = thoughts;
-    return { title, description, tags, content, bookTitle, authors, publisher, period, summary, quote, thoughts, rating };
+    return { title, description, tags, content, bookTitle, authors, publisher, period, summary, quote, thoughts, rating, conclusion };
 }
 
 async function deleteReading(id) {
@@ -1244,6 +1258,8 @@ async function showReadingDynamic(id) {
         modalTitle.textContent = `"${data.bookTitle || '독서'}" 독서감상문`;
         const authors = (data.authors || []).join(', ');
         const stars = renderStarsHtml(Number(data.rating || 5));
+        const defaultConclusion = '삶의 태도를 단순히 위로하는 차원이 아니라 스스로 생각하고 실천하도록 자극하는 힘이 있는 책이다. 같은 고민을 하고 있는 이들에게 꼭 권하고 싶다.';
+        const conclusion = data.conclusion || defaultConclusion;
         modalBody.innerHTML = `
             <div style="text-align: left; line-height: 1.8;">
                 <h3 style="color: #2c3e50; margin-bottom: 1rem;">책 정보</h3>
@@ -1265,8 +1281,8 @@ async function showReadingDynamic(id) {
                 
                 <h3 style="color: #2c3e50; margin: 2rem 0 0.5rem 0;">평점</h3>
                 <p style="font-size: 1.2rem; color:#f1c40f;">${stars} <span style="color:#333;">(${Number(data.rating || 5)}/5)</span></p>
-                
-                ${data.conclusion ? `<p style="margin-top: 2rem; font-style: italic; color: #666;">${escapeHtml(data.conclusion)}</p>` : ''}
+
+                <p style="margin-top: 1rem; font-style: italic; color: #666;">${escapeHtml(conclusion)}</p>
             </div>
         `;
         modal.style.display = 'block';
@@ -1282,6 +1298,15 @@ function renderStarsHtml(n) {
     for (let i = 0; i < count; i++) stars += '★';
     for (let i = count; i < 5; i++) stars += '☆';
     return stars;
+}
+
+// yyyy-MM-dd 형식 날짜 문자열
+function getCurrentDateString() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
 }
 
 function escapeHtml(str) {
@@ -1315,16 +1340,20 @@ const galleryState = {
     storagePath: '',
     images: [],
     currentPage: 1,
-    itemsPerPage: 6
+    itemsPerPage: 6,
+    rtdbPath: ''
 };
+
+let galleryUnsubscribe = null;
 
 async function openGallery(galleryId) {
     const modal = document.getElementById('videoModal');
     const modalTitle = document.getElementById('modalTitle');
     const modalBody = document.getElementById('modalBody');
-
+    
     galleryState.currentGalleryId = galleryId;
     galleryState.storagePath = `galleries/${galleryId}/`;
+    galleryState.rtdbPath = `galleries/${galleryId}`;
     galleryState.currentPage = 1;
 
     modalTitle.textContent = GALLERY_TITLES[galleryId] || '이미지 갤러리';
@@ -1336,7 +1365,7 @@ async function openGallery(galleryId) {
             <button class="btn btn-primary btn-small" id="galleryUploadBtn">업로드</button>
         </div>
         <div class="gallery-grid" id="galleryGrid">
-            <div style="text-align:center; padding:2rem; width:100%">
+            <div style="text-align: center; padding: 2rem; width:100%">
                 <div class="loading-spinner"></div>
                 <p>이미지를 불러오는 중입니다...</p>
             </div>
@@ -1354,52 +1383,116 @@ async function openGallery(galleryId) {
 
     modal.style.display = 'block';
 
+    // 파일 선택 핸들러
+    const chooseBtn = document.getElementById('galleryChooseBtn');
+    const fileInput = document.getElementById('galleryFileInput');
+    const fileName = document.getElementById('galleryFileName');
+    if (chooseBtn) chooseBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => {
+        fileName.textContent = fileInput.files && fileInput.files.length
+            ? Array.from(fileInput.files).map(f => f.name).join(', ')
+            : '선택된 파일 없음';
+    });
+
+    attachGalleryUploadHandler();
+
+    // 이전 구독 해제
+    if (galleryUnsubscribe) { try { galleryUnsubscribe(); } catch (_) {} galleryUnsubscribe = null; }
+
+    // RTDB 실시간 구독 → Storage URL 로드
+    galleryUnsubscribe = onValue(dbRef(rtdb, galleryState.rtdbPath), async (snap) => {
+        const data = snap.val() || {};
+        const arr = Object.entries(data).sort((a,b)=> (b[1].createdAt||0) - (a[1].createdAt||0));
+        const items = await Promise.all(arr.map(async ([id, item]) => {
+            let url = '';
+            try { url = await getDownloadURL(ref(storage, item.storagePath)); } catch (e) { console.warn('이미지 URL 실패:', item.storagePath, e); }
+            return { id, url, storagePath: item.storagePath };
+        }));
+        galleryState.images = items;
+        filterAndPaginateSkills; // no-op to silence lints if any
+        filterAndPaginateGallery();
+    }, (error) => {
+        console.error('갤러리 RTDB 구독 오류:', error);
+        // Fallback: Storage listAll
+        loadGalleryFromStorageFallback();
+    });
+}
+
+async function loadGalleryFromStorageFallback() {
     try {
         const listRef = ref(storage, galleryState.storagePath);
         const res = await listAll(listRef);
-        const urls = await Promise.all(res.items.map(item => getDownloadURL(item)));
-        urls.sort();
-        galleryState.images = urls;
-        renderGalleryPage();
-        attachGalleryUploadHandler();
-    } catch (error) {
-        console.error('갤러리 로드 오류:', error);
+        const items = await Promise.all(res.items.map(async (it) => {
+            const url = await getDownloadURL(it);
+            return { id: '', url, storagePath: it.fullPath };
+        }));
+        galleryState.images = items.sort((a,b)=> (a.storagePath < b.storagePath ? 1 : -1));
+        filterAndPaginateGallery();
+    } catch (e) {
+        console.error('갤러리 로드 오류:', e);
         const grid = document.getElementById('galleryGrid');
         grid.innerHTML = `
             <div style="text-align:center; padding:2rem; width:100%">
                 <i class="fas fa-exclamation-triangle" style="font-size:3rem; color:#e74c3c; margin-bottom:1rem;"></i>
                 <p>이미지를 불러올 수 없습니다.</p>
-                <p>Storage 경로를 확인해주세요: ${galleryState.storagePath}</p>
             </div>
         `;
     }
 }
 
-function renderGalleryPage() {
-    const grid = document.getElementById('galleryGrid');
+function filterAndPaginateGallery() {
+    // 기존 filterAndPaginateSkills와 별개로 갤러리 전용 렌더
     const total = galleryState.images.length;
-    if (total === 0) {
-        grid.innerHTML = `
-            <div style="text-align:center; padding:2rem; width:100%">
-                <p>등록된 이미지가 없습니다. 상단의 업로드 버튼으로 이미지를 추가해보세요.</p>
-            </div>
-        `;
-        updateGalleryPagination(0);
-        return;
-    }
-
     const startIndex = (galleryState.currentPage - 1) * galleryState.itemsPerPage;
     const endIndex = startIndex + galleryState.itemsPerPage;
     const current = galleryState.images.slice(startIndex, endIndex);
 
-    grid.innerHTML = current.map(url => `
+    const grid = document.getElementById('galleryGrid');
+    if (!total) {
+        grid.innerHTML = `<div style="text-align:center; padding:2rem; width:100%">등록된 이미지가 없습니다. 상단에서 업로드해 보세요.</div>`;
+        updateSkillPagination; // noop to avoid unused
+        updateGalleryPagination(0);
+        return;
+    }
+
+    grid.innerHTML = current.map(item => `
         <div class="gallery-item">
-            <img src="${url}" alt="gallery-image" class="gallery-image" loading="lazy" />
+            <div class="gallery-actions">
+                <button class="btn btn-secondary btn-small" data-action="delete-image" data-id="${item.id}" data-path="${item.storagePath}">삭제</button>
+            </div>
+            <img src="${item.url}" alt="gallery-image" class="gallery-image" loading="lazy" />
         </div>
     `).join('');
 
+    bindGalleryDeleteHandlers();
     updateGalleryPagination(total);
 }
+
+function bindGalleryDeleteHandlers() {
+    const grid = document.getElementById('galleryGrid');
+    grid.querySelectorAll('[data-action="delete-image"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-id');
+            const path = btn.getAttribute('data-path');
+            if (!confirm('이미지를 삭제하시겠습니까?')) return;
+            try {
+                await deleteObject(ref(storage, path));
+                if (id) {
+                    await dbRemove(dbRef(rtdb, `${galleryState.rtdbPath}/${id}`));
+                } else {
+                    // fallback 모드: RTDB에 항목이 없을 수 있음
+                    console.warn('RTDB 항목 없음, Storage만 삭제 완료:', path);
+                }
+                showNotification('삭제되었습니다.', 'success');
+            } catch (e) {
+                console.error('이미지 삭제 오류:', e);
+                showNotification('삭제 중 오류가 발생했습니다.', 'error');
+            }
+        });
+    });
+}
+
+function renderGalleryPage() { /* deprecated by filterAndPaginateGallery, keep for compatibility */ }
 
 function getTotalGalleryPages(totalItems) {
     return Math.max(1, Math.ceil(totalItems / galleryState.itemsPerPage));
@@ -1433,7 +1526,7 @@ function updateGalleryPagination(totalItems) {
         btn.textContent = i;
         btn.addEventListener('click', function() {
             galleryState.currentPage = i;
-            renderGalleryPage();
+            filterAndPaginateGallery();
         });
         numbers.appendChild(btn);
     }
@@ -1441,7 +1534,7 @@ function updateGalleryPagination(totalItems) {
     prevBtn.onclick = function() {
         if (galleryState.currentPage > 1) {
             galleryState.currentPage--;
-            renderGalleryPage();
+            filterAndPaginateGallery();
         }
     };
 
@@ -1449,7 +1542,7 @@ function updateGalleryPagination(totalItems) {
         const totalPages = getTotalGalleryPages(totalItems);
         if (galleryState.currentPage < totalPages) {
             galleryState.currentPage++;
-            renderGalleryPage();
+            filterAndPaginateGallery();
         }
     };
 }
@@ -1484,14 +1577,18 @@ function attachGalleryUploadHandler() {
             return;
         }
         try {
-            await authReady; // ensure authenticated before write
+            await authReady;
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
-                const fileRef = ref(storage, `${galleryState.storagePath}${Date.now()}_${i}_${file.name}`);
+                const storagePath = `${galleryState.storagePath}${Date.now()}_${i}_${file.name}`;
+                const fileRef = ref(storage, storagePath);
                 await uploadBytes(fileRef, file);
+                const newRef = push(dbRef(rtdb, galleryState.rtdbPath));
+                await dbSet(newRef, { storagePath: storagePath, createdAt: Date.now(), createdDate: getCurrentDateString() });
             }
-            showNotification('이미지 업로드 완료! 목록을 새로고침합니다.', 'success');
-            openGallery(galleryState.currentGalleryId);
+            showNotification('이미지 업로드 완료!', 'success');
+            fileInput.value = '';
+            fileName.textContent = '선택된 파일 없음';
         } catch (error) {
             console.error('이미지 업로드 오류:', error);
             showNotification('업로드 중 오류가 발생했습니다.', 'error');

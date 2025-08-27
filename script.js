@@ -1340,7 +1340,7 @@ const galleryState = {
     storagePath: '',
     images: [],
     currentPage: 1,
-    itemsPerPage: 6,
+    itemsPerPage: 3,
     rtdbPath: ''
 };
 
@@ -1604,6 +1604,7 @@ function attachGalleryUploadHandler() {
 window.playVideo = playVideo;
 window.showReading = showReading;
 window.openGallery = openGallery;
+window.openArtGallery = openArtGallery;
 
 // ========================================
 // CSS 애니메이션 추가
@@ -1647,3 +1648,248 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style); 
+
+// ========================================
+// 미술 갤러리: 6개 섹션(디자인/소묘/수채화/유화/패션/일상) 분류 + CRUD
+// ========================================
+const ART_SECTIONS = ['전체', '디자인', '소묘', '수채화', '유화', '패션', '일상'];
+const galleryArtState = {
+    currentSection: '전체',
+    items: [],
+    page: 1,
+    perPage: 3,
+    unsub: null
+};
+
+async function openArtGallery(initialSection = '전체') {
+    const modal = document.getElementById('videoModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalBody = document.getElementById('modalBody');
+
+    galleryArtState.currentSection = ART_SECTIONS.includes(initialSection) ? initialSection : '전체';
+    galleryArtState.page = 1;
+
+    modalTitle.textContent = '미술 - 개인 작업물 갤러리';
+    modalBody.innerHTML = `
+        <div class="art-section-tabs" id="artSectionTabs">
+            ${ART_SECTIONS.map(sec => `
+                <button class="art-section-btn ${sec === galleryArtState.currentSection ? 'active' : ''}" data-section="${sec}">${sec}</button>
+            `).join('')}
+        </div>
+        <div class="gallery-upload">
+            <input type="file" id="artFileInput" class="file-input-hidden" accept="image/*" multiple>
+            <button type="button" class="btn btn-secondary" id="artChooseBtn">파일 선택</button>
+            <input type="text" id="artTitleInput" placeholder="이미지 제목 (선택)" style="flex:1; min-width:220px; padding:10px; border:2px solid #e9ecef; border-radius:8px;">
+            <span class="file-name" id="artFileName">선택된 파일 없음</span>
+            <button class="btn btn-primary btn-small" id="artUploadBtn">업로드</button>
+        </div>
+        <div class="gallery-grid" id="artGalleryGrid">
+            <div style="text-align:center; padding:2rem; width:100%">
+                <div class="loading-spinner"></div>
+                <p>이미지를 불러오는 중입니다...</p>
+            </div>
+        </div>
+        <div class="gallery-pagination" id="artGalleryPagination">
+            <button class="gallery-pagination-btn" id="artPrevBtn" disabled>
+                <i class="fas fa-chevron-left"></i> 이전
+            </button>
+            <div class="gallery-pagination-numbers" id="artPaginationNumbers"></div>
+            <button class="gallery-pagination-btn" id="artNextBtn" disabled>
+                다음 <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    `;
+    modal.style.display = 'block';
+
+    // 탭 이벤트
+    const tabs = modalBody.querySelectorAll('.art-section-btn');
+    tabs.forEach(btn => {
+        btn.addEventListener('click', () => {
+            tabs.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            galleryArtState.currentSection = btn.getAttribute('data-section');
+            galleryArtState.page = 1;
+            renderArtGallery();
+        });
+    });
+
+    // 업로드 이벤트
+    const chooseBtn = document.getElementById('artChooseBtn');
+    const fileInput = document.getElementById('artFileInput');
+    const fileName = document.getElementById('artFileName');
+    const uploadBtn = document.getElementById('artUploadBtn');
+    const titleInput = document.getElementById('artTitleInput');
+    if (chooseBtn) chooseBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => {
+        fileName.textContent = fileInput.files && fileInput.files.length
+            ? Array.from(fileInput.files).map(f => f.name).join(', ')
+            : '선택된 파일 없음';
+    });
+    uploadBtn.addEventListener('click', async () => {
+        const files = fileInput.files;
+        if (!files || !files.length) { showNotification('업로드할 이미지를 선택해주세요.', 'error'); return; }
+        try {
+            await authReady;
+            const safeTitle = titleInput.value.trim();
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const storagePath = `galleries/art/${Date.now()}_${i}_${file.name}`;
+                const sref = ref(storage, storagePath);
+                await uploadBytes(sref, file);
+                const itemRef = push(dbRef(rtdb, 'galleries/art'));
+                await dbSet(itemRef, {
+                    storagePath,
+                    createdAt: Date.now(),
+                    createdDate: getCurrentDateString(),
+                    section: galleryArtState.currentSection === '전체' ? '디자인' : galleryArtState.currentSection,
+                    title: safeTitle || file.name
+                });
+            }
+            showNotification('이미지 업로드 완료!', 'success');
+            fileInput.value = '';
+            titleInput.value = '';
+            fileName.textContent = '선택된 파일 없음';
+        } catch (e) {
+            console.error('아트 업로드 오류:', e);
+            showNotification('업로드 중 오류가 발생했습니다.', 'error');
+        }
+    });
+
+    // 기존 구독 해제 후 재구독
+    if (galleryArtState.unsub) { try { galleryArtState.unsub(); } catch (_) {} galleryArtState.unsub = null; }
+    galleryArtState.unsub = onValue(dbRef(rtdb, 'galleries/art'), async (snap) => {
+        const data = snap.val() || {};
+        const arr = Object.entries(data).sort((a,b)=> (b[1].createdAt||0) - (a[1].createdAt||0));
+        const items = await Promise.all(arr.map(async ([id, item]) => {
+            let url = '';
+            try { url = await getDownloadURL(ref(storage, item.storagePath)); } catch (e) { console.warn('이미지 URL 실패:', item.storagePath, e); }
+            return {
+                id,
+                url,
+                storagePath: item.storagePath,
+                section: item.section || '전체',
+                title: item.title || ''
+            };
+        }));
+        galleryArtState.items = items;
+        renderArtGallery();
+    }, (error) => {
+        console.error('아트 갤러리 구독 오류:', error);
+    });
+}
+
+function renderArtGallery() {
+    const grid = document.getElementById('artGalleryGrid');
+    if (!grid) return;
+    const section = galleryArtState.currentSection;
+    const filtered = galleryArtState.items.filter(it => section === '전체' ? true : (it.section === section));
+
+    const total = filtered.length;
+    const start = (galleryArtState.page - 1) * galleryArtState.perPage;
+    const end = start + galleryArtState.perPage;
+    const pageItems = filtered.slice(start, end);
+
+    if (!total) {
+        grid.innerHTML = `<div style="text-align:center; padding:2rem; width:100%">등록된 이미지가 없습니다.</div>`;
+        updateArtPagination(0);
+        return;
+    }
+
+    grid.innerHTML = pageItems.map(item => `
+        <div class="gallery-item">
+            <div class="gallery-actions">
+                <select class="art-move-select" data-id="${item.id}" aria-label="섹션 이동">
+                    ${ART_SECTIONS.filter(s=>s!=='전체').map(sec => `<option value="${sec}" ${sec=== (item.section||'') ? 'selected' : ''}>${sec}</option>`).join('')}
+                </select>
+                <button class="btn btn-secondary btn-small" data-action="edit-title" data-id="${item.id}">제목</button>
+                <button class="btn btn-secondary btn-small" data-action="delete" data-id="${item.id}" data-path="${item.storagePath}">삭제</button>
+            </div>
+            <div class="gallery-frame">
+                <img src="${item.url}" alt="art-image" class="gallery-image" loading="lazy" />
+            </div>
+            ${item.title ? `<div style="margin-top:6px; text-align:center; color:#2c3e50; font-weight:600;">${escapeHtml(item.title)}</div>` : ''}
+        </div>
+    `).join('');
+
+    // 이동/삭제/제목 수정 바인딩
+    grid.querySelectorAll('.art-move-select').forEach(sel => {
+        sel.addEventListener('change', async () => {
+            const id = sel.getAttribute('data-id');
+            const newSection = sel.value;
+            try {
+                await dbUpdate(dbRef(rtdb, `galleries/art/${id}`), { section: newSection, updatedAt: Date.now() });
+                showNotification('섹션이 변경되었습니다.', 'success');
+            } catch (e) {
+                console.error('섹션 변경 오류:', e);
+                showNotification('변경 중 오류가 발생했습니다.', 'error');
+            }
+        });
+    });
+    grid.querySelectorAll('[data-action="delete"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-id');
+            const path = btn.getAttribute('data-path');
+            if (!confirm('이미지를 삭제하시겠습니까?')) return;
+            try {
+                await deleteObject(ref(storage, path));
+                await dbRemove(dbRef(rtdb, `galleries/art/${id}`));
+                showNotification('삭제되었습니다.', 'success');
+            } catch (e) {
+                console.error('삭제 오류:', e);
+                showNotification('삭제 중 오류가 발생했습니다.', 'error');
+            }
+        });
+    });
+    grid.querySelectorAll('[data-action="edit-title"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-id');
+            const current = galleryArtState.items.find(x => x.id === id);
+            const nextTitle = prompt('새 제목을 입력하세요', current?.title || '');
+            if (nextTitle === null) return;
+            try {
+                await dbUpdate(dbRef(rtdb, `galleries/art/${id}`), { title: String(nextTitle).trim(), updatedAt: Date.now() });
+                showNotification('제목이 수정되었습니다.', 'success');
+            } catch (e) {
+                console.error('제목 수정 오류:', e);
+                showNotification('수정 중 오류가 발생했습니다.', 'error');
+            }
+        });
+    });
+
+    updateArtPagination(total);
+}
+
+function updateArtPagination(totalItems) {
+    const totalPages = totalItems === 0 ? 1 : Math.max(1, Math.ceil(totalItems / galleryArtState.perPage));
+    const prevBtn = document.getElementById('artPrevBtn');
+    const nextBtn = document.getElementById('artNextBtn');
+    const numbers = document.getElementById('artPaginationNumbers');
+
+    prevBtn.disabled = galleryArtState.page === 1 || totalItems === 0;
+    nextBtn.disabled = galleryArtState.page === totalPages || totalItems === 0;
+
+    numbers.innerHTML = '';
+    let startPage = Math.max(1, galleryArtState.page - 2);
+    let endPage = Math.min(totalPages, galleryArtState.page + 2);
+    if (endPage - startPage < 4) {
+        if (startPage === 1) endPage = Math.min(totalPages, startPage + 4);
+        else startPage = Math.max(1, endPage - 4);
+    }
+    for (let i = startPage; i <= endPage; i++) {
+        const btn = document.createElement('button');
+        btn.className = `gallery-page-number ${i === galleryArtState.page ? 'active' : ''}`;
+        btn.textContent = i;
+        btn.addEventListener('click', function() {
+            galleryArtState.page = i;
+            renderArtGallery();
+        });
+        numbers.appendChild(btn);
+    }
+
+    prevBtn.onclick = function() {
+        if (galleryArtState.page > 1) { galleryArtState.page--; renderArtGallery(); }
+    };
+    nextBtn.onclick = function() {
+        if (galleryArtState.page < totalPages) { galleryArtState.page++; renderArtGallery(); }
+    };
+}

@@ -1605,6 +1605,8 @@ window.playVideo = playVideo;
 window.showReading = showReading;
 window.openGallery = openGallery;
 window.openArtGallery = openArtGallery;
+window.openCookingGallery = openCookingGallery;
+window.openFashionGallery = openFashionGallery;
 
 // ========================================
 // CSS 애니메이션 추가
@@ -1891,5 +1893,495 @@ function updateArtPagination(totalItems) {
     };
     nextBtn.onclick = function() {
         if (galleryArtState.page < totalPages) { galleryArtState.page++; renderArtGallery(); }
+    };
+}
+
+// ========================================
+// 요리 갤러리: 6개 섹션(한식/중식/일식/양식/분식/베이킹) 분류 + CRUD
+// ========================================
+const COOKING_SECTIONS = ['전체', '한식', '중식', '일식', '양식', '분식', '베이킹'];
+const galleryCookingState = {
+    currentSection: '전체',
+    items: [],
+    page: 1,
+    perPage: 8,
+    unsub: null
+};
+
+async function openCookingGallery(initialSection = '전체') {
+    const modal = document.getElementById('videoModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalBody = document.getElementById('modalBody');
+
+    galleryCookingState.currentSection = COOKING_SECTIONS.includes(initialSection) ? initialSection : '전체';
+    galleryCookingState.page = 1;
+
+    modalTitle.textContent = '요리 - 포토 갤러리';
+    modalBody.innerHTML = `
+        <div class="art-section-tabs" id="cookingSectionTabs">
+            ${COOKING_SECTIONS.map(sec => `
+                <button class="art-section-btn ${sec === galleryCookingState.currentSection ? 'active' : ''}" data-section="${sec}">${sec}</button>
+            `).join('')}
+        </div>
+        <div class="gallery-upload">
+            <input type="file" id="cookingFileInput" class="file-input-hidden" accept="image/*" multiple>
+            <button type="button" class="btn btn-secondary" id="cookingChooseBtn">파일 선택</button>
+            <input type="text" id="cookingTitleInput" placeholder="이미지 제목 (선택)" style="flex:1; min-width:220px; padding:10px; border:2px solid #e9ecef; border-radius:8px;">
+            <span class="file-name" id="cookingFileName">선택된 파일 없음</span>
+            <button class="btn btn-primary btn-small" id="cookingUploadBtn">업로드</button>
+        </div>
+        <div class="gallery-grid" id="cookingGalleryGrid">
+            <div style="text-align:center; padding:2rem; width:100%">
+                <div class="loading-spinner"></div>
+                <p>이미지를 불러오는 중입니다...</p>
+            </div>
+        </div>
+        <div class="gallery-pagination" id="cookingGalleryPagination">
+            <button class="gallery-pagination-btn" id="cookingPrevBtn" disabled>
+                <i class="fas fa-chevron-left"></i> 이전
+            </button>
+            <div class="gallery-pagination-numbers" id="cookingPaginationNumbers"></div>
+            <button class="gallery-pagination-btn" id="cookingNextBtn" disabled>
+                다음 <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    `;
+    modal.style.display = 'block';
+
+    // 탭 이벤트
+    const tabs = modalBody.querySelectorAll('#cookingSectionTabs .art-section-btn');
+    tabs.forEach(btn => {
+        btn.addEventListener('click', () => {
+            tabs.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            galleryCookingState.currentSection = btn.getAttribute('data-section');
+            galleryCookingState.page = 1;
+            renderCookingGallery();
+        });
+    });
+
+    // 업로드 이벤트
+    const chooseBtn = document.getElementById('cookingChooseBtn');
+    const fileInput = document.getElementById('cookingFileInput');
+    const fileName = document.getElementById('cookingFileName');
+    const uploadBtn = document.getElementById('cookingUploadBtn');
+    const titleInput = document.getElementById('cookingTitleInput');
+    if (chooseBtn) chooseBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => {
+        fileName.textContent = fileInput.files && fileInput.files.length
+            ? Array.from(fileInput.files).map(f => f.name).join(', ')
+            : '선택된 파일 없음';
+    });
+    uploadBtn.addEventListener('click', async () => {
+        const files = fileInput.files;
+        if (!files || !files.length) { showNotification('업로드할 이미지를 선택해주세요.', 'error'); return; }
+        try {
+            await authReady;
+            const safeTitle = titleInput.value.trim();
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const storagePath = `galleries/cooking/${Date.now()}_${i}_${file.name}`;
+                const sref = ref(storage, storagePath);
+                await uploadBytes(sref, file);
+                const itemRef = push(dbRef(rtdb, 'galleries/cooking'));
+                await dbSet(itemRef, {
+                    storagePath,
+                    createdAt: Date.now(),
+                    createdDate: getCurrentDateString(),
+                    section: galleryCookingState.currentSection === '전체' ? '한식' : galleryCookingState.currentSection,
+                    title: safeTitle || file.name
+                });
+            }
+            showNotification('이미지 업로드 완료!', 'success');
+            fileInput.value = '';
+            titleInput.value = '';
+            fileName.textContent = '선택된 파일 없음';
+        } catch (e) {
+            console.error('요리 업로드 오류:', e);
+            showNotification('업로드 중 오류가 발생했습니다.', 'error');
+        }
+    });
+
+    // 기존 구독 해제 후 재구독
+    if (galleryCookingState.unsub) { try { galleryCookingState.unsub(); } catch (_) {} galleryCookingState.unsub = null; }
+    galleryCookingState.unsub = onValue(dbRef(rtdb, 'galleries/cooking'), async (snap) => {
+        const data = snap.val() || {};
+        const arr = Object.entries(data).sort((a,b)=> (b[1].createdAt||0) - (a[1].createdAt||0));
+        const items = await Promise.all(arr.map(async ([id, item]) => {
+            let url = '';
+            try { url = await getDownloadURL(ref(storage, item.storagePath)); } catch (e) { console.warn('이미지 URL 실패:', item.storagePath, e); }
+            return {
+                id,
+                url,
+                storagePath: item.storagePath,
+                section: item.section || '전체',
+                title: item.title || ''
+            };
+        }));
+        galleryCookingState.items = items;
+        renderCookingGallery();
+    }, (error) => {
+        console.error('요리 갤러리 구독 오류:', error);
+    });
+}
+
+function renderCookingGallery() {
+    const grid = document.getElementById('cookingGalleryGrid');
+    if (!grid) return;
+    const section = galleryCookingState.currentSection;
+    const filtered = galleryCookingState.items.filter(it => section === '전체' ? true : (it.section === section));
+
+    const total = filtered.length;
+    const start = (galleryCookingState.page - 1) * galleryCookingState.perPage;
+    const end = start + galleryCookingState.perPage;
+    const pageItems = filtered.slice(start, end);
+
+    if (!total) {
+        grid.innerHTML = `<div style="text-align:center; padding:2rem; width:100%">등록된 이미지가 없습니다.</div>`;
+        updateCookingPagination(0);
+        return;
+    }
+
+    grid.innerHTML = pageItems.map(item => `
+        <div class="gallery-item">
+            <div class="gallery-actions">
+                <select class="art-move-select" data-id="${item.id}" aria-label="섹션 이동">
+                    ${COOKING_SECTIONS.filter(s=>s!=='전체').map(sec => `<option value="${sec}" ${sec=== (item.section||'') ? 'selected' : ''}>${sec}</option>`).join('')}
+                </select>
+                <button class="btn btn-secondary btn-small" data-action="edit-title" data-id="${item.id}">제목</button>
+                <button class="btn btn-secondary btn-small" data-action="delete" data-id="${item.id}" data-path="${item.storagePath}">삭제</button>
+            </div>
+            <div class="gallery-frame">
+                <img src="${item.url}" alt="cooking-image" class="gallery-image" loading="lazy" />
+            </div>
+            ${item.title ? `<div style=\"margin-top:6px; text-align:center; color:#2c3e50; font-weight:600;\">${escapeHtml(item.title)}</div>` : ''}
+        </div>
+    `).join('');
+
+    // 이동/삭제/제목 수정 바인딩
+    grid.querySelectorAll('.art-move-select').forEach(sel => {
+        sel.addEventListener('change', async () => {
+            const id = sel.getAttribute('data-id');
+            const newSection = sel.value;
+            try {
+                await dbUpdate(dbRef(rtdb, `galleries/cooking/${id}`), { section: newSection, updatedAt: Date.now() });
+                showNotification('섹션이 변경되었습니다.', 'success');
+            } catch (e) {
+                console.error('섹션 변경 오류:', e);
+                showNotification('변경 중 오류가 발생했습니다.', 'error');
+            }
+        });
+    });
+    grid.querySelectorAll('[data-action="delete"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-id');
+            const path = btn.getAttribute('data-path');
+            if (!confirm('이미지를 삭제하시겠습니까?')) return;
+            try {
+                await deleteObject(ref(storage, path));
+                await dbRemove(dbRef(rtdb, `galleries/cooking/${id}`));
+                showNotification('삭제되었습니다.', 'success');
+            } catch (e) {
+                console.error('삭제 오류:', e);
+                showNotification('삭제 중 오류가 발생했습니다.', 'error');
+            }
+        });
+    });
+    grid.querySelectorAll('[data-action="edit-title"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-id');
+            const current = galleryCookingState.items.find(x => x.id === id);
+            const nextTitle = prompt('새 제목을 입력하세요', current?.title || '');
+            if (nextTitle === null) return;
+            try {
+                await dbUpdate(dbRef(rtdb, `galleries/cooking/${id}`), { title: String(nextTitle).trim(), updatedAt: Date.now() });
+                showNotification('제목이 수정되었습니다.', 'success');
+            } catch (e) {
+                console.error('제목 수정 오류:', e);
+                showNotification('수정 중 오류가 발생했습니다.', 'error');
+            }
+        });
+    });
+
+    updateCookingPagination(total);
+}
+
+function updateCookingPagination(totalItems) {
+    const totalPages = totalItems === 0 ? 1 : Math.max(1, Math.ceil(totalItems / galleryCookingState.perPage));
+    const prevBtn = document.getElementById('cookingPrevBtn');
+    const nextBtn = document.getElementById('cookingNextBtn');
+    const numbers = document.getElementById('cookingPaginationNumbers');
+
+    prevBtn.disabled = galleryCookingState.page === 1 || totalItems === 0;
+    nextBtn.disabled = galleryCookingState.page === totalPages || totalItems === 0;
+
+    numbers.innerHTML = '';
+    let startPage = Math.max(1, galleryCookingState.page - 2);
+    let endPage = Math.min(totalPages, galleryCookingState.page + 2);
+    if (endPage - startPage < 4) {
+        if (startPage === 1) endPage = Math.min(totalPages, startPage + 4);
+        else startPage = Math.max(1, endPage - 4);
+    }
+    for (let i = startPage; i <= endPage; i++) {
+        const btn = document.createElement('button');
+        btn.className = `gallery-page-number ${i === galleryCookingState.page ? 'active' : ''}`;
+        btn.textContent = i;
+        btn.addEventListener('click', function() {
+            galleryCookingState.page = i;
+            renderCookingGallery();
+        });
+        numbers.appendChild(btn);
+    }
+
+    prevBtn.onclick = function() {
+        if (galleryCookingState.page > 1) { galleryCookingState.page--; renderCookingGallery(); }
+    };
+    nextBtn.onclick = function() {
+        if (galleryCookingState.page < totalPages) { galleryCookingState.page++; renderCookingGallery(); }
+    };
+}
+
+// ========================================
+// 패션 포토북 갤러리: 4개 섹션(하라주쿠/모던/빈티지/데일리) + CRUD
+// ========================================
+const FASHION_SECTIONS = ['전체', '하라주쿠', '모던', '빈티지', '데일리'];
+const galleryFashionState = {
+    currentSection: '전체',
+    items: [],
+    page: 1,
+    perPage: 6,
+    unsub: null
+};
+
+async function openFashionGallery(initialSection = '전체') {
+    const modal = document.getElementById('videoModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalBody = document.getElementById('modalBody');
+
+    galleryFashionState.currentSection = FASHION_SECTIONS.includes(initialSection) ? initialSection : '전체';
+    galleryFashionState.page = 1;
+
+    modalTitle.textContent = '패션 - 포토북';
+    modalBody.innerHTML = `
+        <div class="art-section-tabs" id="fashionSectionTabs">
+            ${FASHION_SECTIONS.map(sec => `
+                <button class="art-section-btn ${sec === galleryFashionState.currentSection ? 'active' : ''}" data-section="${sec}">${sec}</button>
+            `).join('')}
+        </div>
+        <div class="gallery-upload">
+            <input type="file" id="fashionFileInput" class="file-input-hidden" accept="image/*" multiple>
+            <button type="button" class="btn btn-secondary" id="fashionChooseBtn">파일 선택</button>
+            <input type="text" id="fashionTitleInput" placeholder="이미지 제목 (선택)" style="flex:1; min-width:220px; padding:10px; border:2px solid #e9ecef; border-radius:8px;">
+            <span class="file-name" id="fashionFileName">선택된 파일 없음</span>
+            <button class="btn btn-primary btn-small" id="fashionUploadBtn">업로드</button>
+        </div>
+        <div class="gallery-grid" id="fashionGalleryGrid">
+            <div style="text-align:center; padding:2rem; width:100%">
+                <div class="loading-spinner"></div>
+                <p>이미지를 불러오는 중입니다...</p>
+            </div>
+        </div>
+        <div class="gallery-pagination" id="fashionGalleryPagination">
+            <button class="gallery-pagination-btn" id="fashionPrevBtn" disabled>
+                <i class="fas fa-chevron-left"></i> 이전
+            </button>
+            <div class="gallery-pagination-numbers" id="fashionPaginationNumbers"></div>
+            <button class="gallery-pagination-btn" id="fashionNextBtn" disabled>
+                다음 <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    `;
+    modal.style.display = 'block';
+
+    // 탭 이벤트
+    const tabs = modalBody.querySelectorAll('#fashionSectionTabs .art-section-btn');
+    tabs.forEach(btn => {
+        btn.addEventListener('click', () => {
+            tabs.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            galleryFashionState.currentSection = btn.getAttribute('data-section');
+            galleryFashionState.page = 1;
+            renderFashionGallery();
+        });
+    });
+
+    // 업로드 이벤트
+    const chooseBtn = document.getElementById('fashionChooseBtn');
+    const fileInput = document.getElementById('fashionFileInput');
+    const fileName = document.getElementById('fashionFileName');
+    const uploadBtn = document.getElementById('fashionUploadBtn');
+    const titleInput = document.getElementById('fashionTitleInput');
+    if (chooseBtn) chooseBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => {
+        fileName.textContent = fileInput.files && fileInput.files.length
+            ? Array.from(fileInput.files).map(f => f.name).join(', ')
+            : '선택된 파일 없음';
+    });
+    uploadBtn.addEventListener('click', async () => {
+        const files = fileInput.files;
+        if (!files || !files.length) { showNotification('업로드할 이미지를 선택해주세요.', 'error'); return; }
+        try {
+            await authReady;
+            const safeTitle = titleInput.value.trim();
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const storagePath = `galleries/fashion/${Date.now()}_${i}_${file.name}`;
+                const sref = ref(storage, storagePath);
+                await uploadBytes(sref, file);
+                const itemRef = push(dbRef(rtdb, 'galleries/fashion'));
+                await dbSet(itemRef, {
+                    storagePath,
+                    createdAt: Date.now(),
+                    createdDate: getCurrentDateString(),
+                    section: galleryFashionState.currentSection === '전체' ? '하라주쿠' : galleryFashionState.currentSection,
+                    title: safeTitle || file.name
+                });
+            }
+            showNotification('이미지 업로드 완료!', 'success');
+            fileInput.value = '';
+            titleInput.value = '';
+            fileName.textContent = '선택된 파일 없음';
+        } catch (e) {
+            console.error('패션 업로드 오류:', e);
+            showNotification('업로드 중 오류가 발생했습니다.', 'error');
+        }
+    });
+
+    // 기존 구독 해제 후 재구독
+    if (galleryFashionState.unsub) { try { galleryFashionState.unsub(); } catch (_) {} galleryFashionState.unsub = null; }
+    galleryFashionState.unsub = onValue(dbRef(rtdb, 'galleries/fashion'), async (snap) => {
+        const data = snap.val() || {};
+        const arr = Object.entries(data).sort((a,b)=> (b[1].createdAt||0) - (a[1].createdAt||0));
+        const items = await Promise.all(arr.map(async ([id, item]) => {
+            let url = '';
+            try { url = await getDownloadURL(ref(storage, item.storagePath)); } catch (e) { console.warn('이미지 URL 실패:', item.storagePath, e); }
+            return {
+                id,
+                url,
+                storagePath: item.storagePath,
+                section: item.section || '전체',
+                title: item.title || ''
+            };
+        }));
+        galleryFashionState.items = items;
+        renderFashionGallery();
+    }, (error) => {
+        console.error('패션 갤러리 구독 오류:', error);
+    });
+}
+
+function renderFashionGallery() {
+    const grid = document.getElementById('fashionGalleryGrid');
+    if (!grid) return;
+    const section = galleryFashionState.currentSection;
+    const filtered = galleryFashionState.items.filter(it => section === '전체' ? true : (it.section === section));
+
+    const total = filtered.length;
+    const start = (galleryFashionState.page - 1) * galleryFashionState.perPage;
+    const end = start + galleryFashionState.perPage;
+    const pageItems = filtered.slice(start, end);
+
+    if (!total) {
+        grid.innerHTML = `<div style="text-align:center; padding:2rem; width:100%">등록된 이미지가 없습니다.</div>`;
+        updateFashionPagination(0);
+        return;
+    }
+
+    grid.innerHTML = pageItems.map(item => `
+        <div class="gallery-item">
+            <div class="gallery-actions">
+                <select class="art-move-select" data-id="${item.id}" aria-label="섹션 이동">
+                    ${FASHION_SECTIONS.filter(s=>s!=='전체').map(sec => `<option value="${sec}" ${sec=== (item.section||'') ? 'selected' : ''}>${sec}</option>`).join('')}
+                </select>
+                <button class="btn btn-secondary btn-small" data-action="edit-title" data-id="${item.id}">제목</button>
+                <button class="btn btn-secondary btn-small" data-action="delete" data-id="${item.id}" data-path="${item.storagePath}">삭제</button>
+            </div>
+            <div class="gallery-frame">
+                <img src="${item.url}" alt="fashion-image" class="gallery-image" loading="lazy" />
+            </div>
+            ${item.title ? `<div style=\"margin-top:6px; text-align:center; color:#2c3e50; font-weight:600;\">${escapeHtml(item.title)}</div>` : ''}
+        </div>
+    `).join('');
+
+    // 이동/삭제/제목 수정 바인딩
+    grid.querySelectorAll('.art-move-select').forEach(sel => {
+        sel.addEventListener('change', async () => {
+            const id = sel.getAttribute('data-id');
+            const newSection = sel.value;
+            try {
+                await dbUpdate(dbRef(rtdb, `galleries/fashion/${id}`), { section: newSection, updatedAt: Date.now() });
+                showNotification('섹션이 변경되었습니다.', 'success');
+            } catch (e) {
+                console.error('섹션 변경 오류:', e);
+                showNotification('변경 중 오류가 발생했습니다.', 'error');
+            }
+        });
+    });
+    grid.querySelectorAll('[data-action="delete"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-id');
+            const path = btn.getAttribute('data-path');
+            if (!confirm('이미지를 삭제하시겠습니까?')) return;
+            try {
+                await deleteObject(ref(storage, path));
+                await dbRemove(dbRef(rtdb, `galleries/fashion/${id}`));
+                showNotification('삭제되었습니다.', 'success');
+            } catch (e) {
+                console.error('삭제 오류:', e);
+                showNotification('삭제 중 오류가 발생했습니다.', 'error');
+            }
+        });
+    });
+    grid.querySelectorAll('[data-action="edit-title"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-id');
+            const current = galleryFashionState.items.find(x => x.id === id);
+            const nextTitle = prompt('새 제목을 입력하세요', current?.title || '');
+            if (nextTitle === null) return;
+            try {
+                await dbUpdate(dbRef(rtdb, `galleries/fashion/${id}`), { title: String(nextTitle).trim(), updatedAt: Date.now() });
+                showNotification('제목이 수정되었습니다.', 'success');
+            } catch (e) {
+                console.error('제목 수정 오류:', e);
+                showNotification('수정 중 오류가 발생했습니다.', 'error');
+            }
+        });
+    });
+
+    updateFashionPagination(total);
+}
+
+function updateFashionPagination(totalItems) {
+    const totalPages = totalItems === 0 ? 1 : Math.max(1, Math.ceil(totalItems / galleryFashionState.perPage));
+    const prevBtn = document.getElementById('fashionPrevBtn');
+    const nextBtn = document.getElementById('fashionNextBtn');
+    const numbers = document.getElementById('fashionPaginationNumbers');
+
+    prevBtn.disabled = galleryFashionState.page === 1 || totalItems === 0;
+    nextBtn.disabled = galleryFashionState.page === totalPages || totalItems === 0;
+
+    numbers.innerHTML = '';
+    let startPage = Math.max(1, galleryFashionState.page - 2);
+    let endPage = Math.min(totalPages, galleryFashionState.page + 2);
+    if (endPage - startPage < 4) {
+        if (startPage === 1) endPage = Math.min(totalPages, startPage + 4);
+        else startPage = Math.max(1, endPage - 4);
+    }
+    for (let i = startPage; i <= endPage; i++) {
+        const btn = document.createElement('button');
+        btn.className = `gallery-page-number ${i === galleryFashionState.page ? 'active' : ''}`;
+        btn.textContent = i;
+        btn.addEventListener('click', function() {
+            galleryFashionState.page = i;
+            renderFashionGallery();
+        });
+        numbers.appendChild(btn);
+    }
+
+    prevBtn.onclick = function() {
+        if (galleryFashionState.page > 1) { galleryFashionState.page--; renderFashionGallery(); }
+    };
+    nextBtn.onclick = function() {
+        if (galleryFashionState.page < totalPages) { galleryFashionState.page++; renderFashionGallery(); }
     };
 }

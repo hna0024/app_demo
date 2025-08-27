@@ -1274,3 +1274,5 @@ blockquote {
 	background: #fff;
 	color: #2c3e50;
 }
+
+/* cooking tabs reuse art styles; no extra rules needed */

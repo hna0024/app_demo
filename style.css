@@ -7,11 +7,16 @@
     box-sizing: border-box;
 }
 
+html {
+    scroll-behavior: smooth;
+}
+
 body {
     font-family: 'Noto Sans KR', sans-serif;
     line-height: 1.6;
     color: #333;
     overflow-x: hidden;
+    background-color: #ffffff;
 }
 
 .container {
@@ -19,6 +24,19 @@ body {
     margin: 0 auto;
     padding: 0 20px;
 }
+
+/* ========================================
+   공통 유틸리티 클래스
+   ======================================== */
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+.mb-1 { margin-bottom: 0.5rem; }
+.mb-2 { margin-bottom: 1rem; }
+.mb-3 { margin-bottom: 1.5rem; }
+.mt-1 { margin-top: 0.5rem; }
+.mt-2 { margin-top: 1rem; }
+.mt-3 { margin-top: 1.5rem; }
 
 /* ========================================
    방문자 카운터 스타일
@@ -183,7 +201,9 @@ body {
     gap: 1rem;
 }
 
-/* 버튼 공통 스타일 */
+/* ========================================
+   버튼 시스템
+   ======================================== */
 .btn {
     padding: 12px 24px;
     border: none;
@@ -194,16 +214,32 @@ body {
     cursor: pointer;
     display: inline-block;
     text-align: center;
+    font-family: inherit;
+    line-height: 1.2;
 }
 
+/* 버튼 크기 변형 */
+.btn-small {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+}
+
+.btn-large {
+    padding: 16px 32px;
+    font-size: 1.1rem;
+}
+
+/* 버튼 색상 변형 */
 .btn-primary {
     background: #f39c12;
     color: white;
+    box-shadow: 0 2px 8px rgba(243, 156, 18, 0.3);
 }
 
 .btn-primary:hover {
     background: #e67e22;
     transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(243, 156, 18, 0.4);
 }
 
 .btn-secondary {
@@ -216,11 +252,20 @@ body {
     background: white;
     color: #667eea;
     transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
 }
 
-.btn-small {
-    padding: 8px 16px;
-    font-size: 0.9rem;
+/* 모달 내부 버튼 스타일 */
+.modal .btn.btn-secondary {
+    border-color: #3498db;
+    color: #3498db;
+    background: transparent;
+}
+
+.modal .btn.btn-secondary:hover {
+    background: #3498db;
+    color: #fff;
+    transform: translateY(-2px);
 }
 
 /* 프로필 카드 스타일 */
@@ -421,20 +466,10 @@ section {
     flex-wrap: wrap;
 }
 
-.filter-btn {
-    padding: 10px 20px;
-    border: 2px solid #3498db;
-    background: transparent;
-    color: #3498db;
-    border-radius: 25px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-weight: 500;
-}
-
 /* ========================================
-   Skills 섹션 필터 스타일
+   필터 버튼 시스템
    ======================================== */
+.project-filters,
 .skill-filters {
     display: flex;
     justify-content: center;
@@ -443,6 +478,7 @@ section {
     flex-wrap: wrap;
 }
 
+.filter-btn,
 .skill-filter-btn {
     padding: 10px 20px;
     border: 2px solid #3498db;
@@ -454,87 +490,17 @@ section {
     font-weight: 500;
 }
 
+.filter-btn.active,
+.filter-btn:hover,
 .skill-filter-btn.active,
 .skill-filter-btn:hover {
     background: #3498db;
     color: white;
 }
 
-/* ========================================
-   Skills 페이지네이션 스타일
-   ======================================== */
-.skill-pagination {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 1rem;
-    margin-top: 3rem;
-    padding: 1rem 0;
-}
 
-.skill-pagination-btn {
-    padding: 10px 20px;
-    border: 2px solid #3498db;
-    background: transparent;
-    color: #3498db;
-    border-radius: 25px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
 
-.skill-pagination-btn:hover:not(:disabled) {
-    background: #3498db;
-    color: white;
-    transform: translateY(-2px);
-}
 
-.skill-pagination-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    border-color: #ccc;
-    color: #ccc;
-}
-
-.skill-pagination-numbers {
-    display: flex;
-    gap: 0.5rem;
-}
-
-.skill-page-number {
-    width: 40px;
-    height: 40px;
-    border: 2px solid #3498db;
-    background: transparent;
-    color: #3498db;
-    border-radius: 50%;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.skill-page-number:hover {
-    background: #3498db;
-    color: white;
-    transform: translateY(-2px);
-}
-
-.skill-page-number.active {
-    background: #3498db;
-    color: white;
-}
-
-.filter-btn.active,
-.filter-btn:hover {
-    background: #3498db;
-    color: white;
-}
 
 .projects-grid {
     display: grid;
@@ -802,9 +768,11 @@ section {
 }
 
 /* ========================================
-   페이지네이션 스타일
+   페이지네이션 시스템
    ======================================== */
-.pagination {
+.pagination,
+.skill-pagination,
+.gallery-pagination {
     display: flex;
     justify-content: center;
     align-items: center;
@@ -813,7 +781,9 @@ section {
     padding: 1rem 0;
 }
 
-.pagination-btn {
+.pagination-btn,
+.skill-pagination-btn,
+.gallery-pagination-btn {
     padding: 10px 20px;
     border: 2px solid #3498db;
     background: transparent;
@@ -827,25 +797,33 @@ section {
     gap: 0.5rem;
 }
 
-.pagination-btn:hover:not(:disabled) {
+.pagination-btn:hover:not(:disabled),
+.skill-pagination-btn:hover:not(:disabled),
+.gallery-pagination-btn:hover:not(:disabled) {
     background: #3498db;
     color: white;
     transform: translateY(-2px);
 }
 
-.pagination-btn:disabled {
+.pagination-btn:disabled,
+.skill-pagination-btn:disabled,
+.gallery-pagination-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
     border-color: #ccc;
     color: #ccc;
 }
 
-.pagination-numbers {
+.pagination-numbers,
+.skill-pagination-numbers,
+.gallery-pagination-numbers {
     display: flex;
     gap: 0.5rem;
 }
 
-.page-number {
+.page-number,
+.skill-page-number,
+.gallery-page-number {
     width: 40px;
     height: 40px;
     border: 2px solid #3498db;
@@ -860,13 +838,17 @@ section {
     justify-content: center;
 }
 
-.page-number:hover {
+.page-number:hover,
+.skill-page-number:hover,
+.gallery-page-number:hover {
     background: #3498db;
     color: white;
     transform: translateY(-2px);
 }
 
-.page-number.active {
+.page-number.active,
+.skill-page-number.active,
+.gallery-page-number.active {
     background: #3498db;
     color: white;
 }
@@ -874,24 +856,6 @@ section {
 /* ========================================
    Gallery 모달 내 이미지 그리드 및 페이지네이션
    ======================================== */
-.gallery-upload {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-    flex-wrap: wrap;
-}
-
-/* 숨긴 파일 입력 */
-.gallery-upload .file-input-hidden {
-    display: none;
-}
-
-.gallery-upload .file-name {
-    color: #666;
-    font-size: 0.95rem;
-}
 
 /* Framed gallery look */
 .gallery-grid {
@@ -943,72 +907,7 @@ section {
 	z-index: 3;
 }
 
-.gallery-pagination {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 1rem;
-    margin-top: 1.5rem;
-    padding: 0.5rem 0;
-}
 
-.gallery-pagination-btn {
-    padding: 10px 20px;
-    border: 2px solid #3498db;
-    background: transparent;
-    color: #3498db;
-    border-radius: 25px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.gallery-pagination-btn:hover:not(:disabled) {
-    background: #3498db;
-    color: white;
-    transform: translateY(-2px);
-}
-
-.gallery-pagination-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    border-color: #ccc;
-    color: #ccc;
-}
-
-.gallery-pagination-numbers {
-    display: flex;
-    gap: 0.5rem;
-}
-
-.gallery-page-number {
-    width: 40px;
-    height: 40px;
-    border: 2px solid #3498db;
-    background: transparent;
-    color: #3498db;
-    border-radius: 50%;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.gallery-page-number:hover {
-    background: #3498db;
-    color: white;
-    transform: translateY(-2px);
-}
-
-.gallery-page-number.active {
-    background: #3498db;
-    color: white;
-}
 
 /* ========================================
    반응형 디자인
@@ -1149,6 +1048,31 @@ section {
 }
 
 /* ========================================
+   타이핑 애니메이션 스타일
+   ======================================== */
+.typing-container {
+    display: inline;
+}
+
+.typing-container .highlight {
+    color: #f39c12;
+    font-weight: inherit;
+}
+
+/* 타이핑 커서 효과 */
+.typing-container::after {
+    content: '|';
+    color: #ffffff;
+    animation: blink 1s infinite;
+    margin-left: 2px;
+}
+
+@keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+}
+
+/* ========================================
    스크롤바 스타일
    ======================================== */
 ::-webkit-scrollbar {
@@ -1226,21 +1150,28 @@ blockquote {
 .video-title { color:#2c3e50; font-weight: 600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .video-actions { display:flex; gap:0.5rem; } 
 
-/* Make secondary buttons visible on white modal background */
-.modal .btn.btn-secondary {
-	border-color: #3498db;
-	color: #3498db;
-	background: transparent;
-}
-.modal .btn.btn-secondary:hover {
-	background: #3498db;
-	color: #fff;
-	transform: translateY(-2px);
+
+
+/* ========================================
+   갤러리 업로드 시스템
+   ======================================== */
+.gallery-upload {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
 }
 
-/* Upload row tweaks */
-.gallery-upload {
-	gap: 0.75rem;
+/* 숨긴 파일 입력 */
+.gallery-upload .file-input-hidden {
+    display: none;
+}
+
+.gallery-upload .file-name {
+    color: #666;
+    font-size: 0.95rem;
 } 
 
 /* Art section tabs */

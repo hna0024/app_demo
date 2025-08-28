@@ -5,6 +5,10 @@ import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit } from
 import { getStorage, ref, uploadBytes, getDownloadURL, listAll, deleteObject } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js";
 import { getDatabase, ref as dbRef, onValue, push, set as dbSet, update as dbUpdate, remove as dbRemove, get as dbGet, child } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js";
 
+// Firestore import에 아래 3개 추가
+import { doc, setDoc, updateDoc, increment, onSnapshot } 
+  from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+
 // Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyByl8nNi16tW1Y-p4ENLfRUMxryEi6Rli0",
@@ -52,24 +56,34 @@ let currentSkillFilter = 'all';
 // DOM 로드 완료 후 실행되는 메인 함수
 // ========================================
 document.addEventListener('DOMContentLoaded', function() {
+    // 1. Firebase 및 인증 초기화
     initializeFirebase();
+    
+    // 2. UI 컴포넌트 초기화
     initializeNavigation();
-    initializeScrollEffects();
-    initializeSmoothScroll();
-    initializeSkillAnimations();
-    initializeProjectFilters();
-    initializeScrollAnimations();
     initializeModal();
     initializeContactForm();
+    
+    // 3. 애니메이션 및 효과 초기화
     initializeTypingAnimation();
+    initializeScrollEffects();
+    initializeScrollAnimations();
     initializeHoverEffects();
     initializeScrollProgress();
     initializePageLoadEffects();
+    initializeSkillAnimations();
+    
+    // 4. 데이터 및 기능 초기화
     initializeVisitorCounter();
     initializeProjectData();
+    
+    // 5. 필터링 및 페이지네이션 초기화
+    initializeProjectFilters();
     initializePagination();
     initializeSkillFilters();
     initializeSkillPagination();
+    
+    // 6. CRUD 기능 초기화
     initializeReadingCRUD();
 });
 
@@ -101,60 +115,76 @@ async function initializeFirebase() {
 // ========================================
 async function initializeVisitorCounter() {
     try {
-        // 방문자 수 증가
-        const visitorRef = collection(db, 'visitors');
-        await addDoc(visitorRef, {
-            timestamp: new Date(),
-            userAgent: navigator.userAgent,
-            userId: currentUser ? currentUser.uid : 'anonymous'
+      if (!currentUser) {
+        console.warn("사용자 인증이 아직 완료되지 않았습니다.");
+        return;
+      }
+  
+      // 1) 방문자 로그 기록 (visitors/{autoId})
+      const visitorRef = collection(db, 'visitors');
+      await addDoc(visitorRef, {
+        timestamp: new Date(),
+        userAgent: navigator.userAgent,
+        userId: currentUser.uid   // 규칙과 일치해야 함
+      });
+  
+      // 2) 방문자 카운트 증가 (stats/visitorCount)
+      const counterRef = doc(db, "stats", "visitorCount");
+      try {
+        await updateDoc(counterRef, {
+          count: increment(1),
+          lastVisit: new Date()
         });
-
-        // 총 방문자 수 표시
-        const visitorCountRef = collection(db, 'visitorCount');
-        const q = query(visitorCountRef, orderBy('timestamp', 'desc'), limit(1));
-        const querySnapshot = await getDocs(q);
-        
-        if (!querySnapshot.empty) {
-            const lastDoc = querySnapshot.docs[0];
-            visitorCount = lastDoc.data().count + 1;
-        } else {
-            visitorCount = 1;
-        }
-
-        // 방문자 수 업데이트
-        await addDoc(visitorCountRef, {
-            count: visitorCount,
-            timestamp: new Date()
+      } catch (error) {
+        // 문서가 없으면 생성
+        await setDoc(counterRef, {
+          count: 1,
+          lastVisit: new Date()
         });
-
-        // UI에 방문자 수 표시
-        updateVisitorDisplay();
+      }
+  
+      // 3) 실시간 카운트 리스너 등록
+      listenVisitorCount();
+  
     } catch (error) {
-        console.error('방문자 카운터 오류:', error);
+      console.error('방문자 카운터 오류:', error);
     }
-}
-
-function updateVisitorDisplay() {
+  }
+  
+  // ========================================
+  // 실시간 카운트 리스너
+  // ========================================
+  function listenVisitorCount() {
+    const counterRef = doc(db, "stats", "visitorCount");
+    onSnapshot(counterRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        visitorCount = data.count || 0;
+        updateVisitorDisplay();
+      }
+    });
+  }
+  
+  // ========================================
+  // UI 업데이트
+  // ========================================
+  function updateVisitorDisplay() {
     const visitorElement = document.querySelector('.visitor-count');
     if (visitorElement) {
-        visitorElement.textContent = `방문자: ${visitorCount.toLocaleString()}명`;
+      visitorElement.textContent = `방문자: ${visitorCount.toLocaleString()}명`;
     }
-}
+  }
+  
 
 // ========================================
 // 프로젝트 데이터 관리
 // ========================================
 async function initializeProjectData() {
     try {
-        // Firestore에서 프로젝트 데이터 로드
-        const projectsRef = collection(db, 'projects');
-        const q = query(projectsRef, orderBy('createdAt', 'desc'));
-        const querySnapshot = await getDocs(q);
-        
-        const projects = [];
-        querySnapshot.forEach((doc) => {
-            projects.push({ id: doc.id, ...doc.data() });
-        });
+        // RTDB에서 프로젝트 데이터 로드
+        const snap = await dbGet(dbRef(rtdb, 'projects'));
+        const data = snap.val() || {};
+        const projects = Object.entries(data).map(([id, v]) => ({ id, ...v }));
 
         // 프로젝트 데이터가 있으면 UI 업데이트
         if (projects.length > 0) {
@@ -658,14 +688,15 @@ function initializeContactForm() {
         }
 
         try {
-            // Firestore에 메시지 저장
-            const messagesRef = collection(db, 'messages');
-            await addDoc(messagesRef, {
+            await authReady;
+            // RTDB에 메시지 저장
+            const msgRef = push(dbRef(rtdb, 'messages'));
+            await dbSet(msgRef, {
                 name: name,
                 email: email,
                 subject: subject,
                 message: message,
-                timestamp: new Date(),
+                timestamp: Date.now(),
                 userId: currentUser ? currentUser.uid : 'anonymous',
                 read: false
             });
@@ -680,27 +711,56 @@ function initializeContactForm() {
 }
 
 // ========================================
-// 타이핑 애니메이션
+// 타이핑 애니메이션 (제목만)
 // ========================================
 function initializeTypingAnimation() {
     const heroTitle = document.querySelector('.hero-title');
+    
     if (heroTitle) {
-        const text = heroTitle.textContent;
-        heroTitle.textContent = '';
-        
-        let i = 0;
-        const typeWriter = () => {
-            if (i < text.length) {
-                heroTitle.textContent += text.charAt(i);
-                i++;
-                setTimeout(typeWriter, 100);
-            }
-        };
-        
-        // 페이지 로드 후 타이핑 시작
-        setTimeout(typeWriter, 500);
+        animateTitle(heroTitle);
     }
 }
+
+function animateTitle(element) {
+    const originalHTML = element.innerHTML;
+    const textContent = element.textContent;
+    
+    // 타이핑 애니메이션을 위한 임시 요소들 생성
+    const tempContainer = document.createElement('span');
+    tempContainer.className = 'typing-container';
+    
+    // 원본 HTML을 복사하여 시작
+    element.innerHTML = '';
+    element.appendChild(tempContainer);
+    
+    let i = 0;
+    const typeWriter = () => {
+        if (i < textContent.length) {
+            const char = textContent.charAt(i);
+            const charSpan = document.createElement('span');
+            charSpan.textContent = char;
+            
+            // 이름 부분은 하이라이트 스타일 적용
+            if (i >= textContent.indexOf('Hanna Lee') && i < textContent.indexOf('Hanna Lee') + 'Hanna Lee'.length) {
+                charSpan.className = 'highlight';
+            }
+            
+            tempContainer.appendChild(charSpan);
+            i++;
+            setTimeout(typeWriter, 100);
+        } else {
+            // 타이핑 완료 후 원본 HTML로 복원
+            setTimeout(() => {
+                element.innerHTML = originalHTML;
+            }, 1500);
+        }
+    };
+    
+    // 페이지 로드 후 타이핑 시작
+    setTimeout(typeWriter, 500);
+}
+
+
 
 // ========================================
 // 호버 효과
@@ -990,7 +1050,7 @@ function showReading(readingId) {
                     <p><strong>읽은 기간:</strong> 2024년 1월</p>
                     
                     <h3 style="color: #2c3e50; margin: 2rem 0 1rem 0;">주요 내용</h3>
-                    <p>이 책은 아들러 심리학을 바탕으로, “자유롭게 살기 위한 용기”가 무엇인지 풀어낸 철학 대화록이다. 
+                    <p>이 책은 아들러 심리학을 바탕으로, "자유롭게 살기 위한 용기"가 무엇인지 풀어낸 철학 대화록이다. 
                     철학자와 청년의 대화를 통해 과거 경험의 굴레에서 벗어나, 타인의 시선이 아닌 자신의 선택으로 살아가는 방법을 제시한다.
                     핵심은 "과제의 분리"다. 내가 감당할 수 있는 것과 감당할 수 없는 것을 구분하고, 
                     내 몫에 집중할 때 비로소 진정한 자유와 평온을 얻을 수 있다는 메시지를 담고 있다.</p>
@@ -1006,11 +1066,11 @@ function showReading(readingId) {
                     하지만 이 책은 그 굴레에서 벗어나는 첫걸음이 나 스스로 선택할 용기를 갖는 것임을 일깨워줬다.
                     </p>
                     
-                    <p>특히 “과제의 분리” 개념은 내게 오래 남을 지혜라고 확신한다. 
+                    <p>특히 "과제의 분리" 개념은 내게 오래 남을 지혜라고 확신한다. 
                     누군가의 인정이나 반응은 내가 통제할 수 없는 영역임을 인정하고, 
                     오직 나의 태도와 행동에 집중하는 것. 
                     단순하지만 실천하기 어려운 이 원칙은 관계에서 자율성과 건강한 거리를 지켜내는 힘이 된다고 느꼈다.
-                    결국 이 책은 “나를 더 선명하게 살아가는 방법”에 관한 안내서였다. 
+                    결국 이 책은 "나를 더 선명하게 살아가는 방법"에 관한 안내서였다. 
                     과거에 얽매이지 않고, 타인의 시선에 흔들리지 않으며, 지금 이 순간 내가 나답게 서 있을 수 있는 용기. 
                     그 용기를 잃지 않는다면, 앞으로의 어떤 관계나 상황에서도 흔들리지 않는 내적 자유를 지킬 수 있으리라 확신한다.</p>
                     

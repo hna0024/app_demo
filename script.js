@@ -2209,7 +2209,7 @@ const galleryFashionState = {
     currentSection: '전체',
     items: [],
     page: 1,
-    perPage: 6,
+    perPage: 8,
     unsub: null
 };
 
